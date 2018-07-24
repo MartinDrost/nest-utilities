@@ -2,8 +2,9 @@
   "name": "nest-utilities",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
+    "prepublish": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -17,8 +18,14 @@
   },
   "homepage": "https://github.com/MartinDrost/nest-utilities#readme",
   "dependencies": {
-    "@nestjs/common": "^5.0.1",
-    "@nestjs/core": "^5.0.1",
+    "@nestjs/common": "^5.0.0-beta.6",
+    "@nestjs/core": "^5.0.0-beta.6",
+    "@nestjs/microservices": "^5.0.0-beta.6",
+    "@nestjs/testing": "^5.0.0-beta.6",
+    "@nestjs/websockets": "^5.0.0-beta.6",
+    "fastify-formbody": "^2.0.0",
+    "typescript": "^2.6.2",
+    "reflect-metadata": "^0.1.12",
     "deep-assign": "^2.0.0",
     "rxjs": "^6.1.0",
     "mongoose": "^5.1.6",
@@ -30,6 +37,10 @@
     "@types/deep-assign": "^0.1.1",
     "@types/lodash": "^4.14.109",
     "@types/lodash-es": "^4.17.0",
-    "@types/mongoose": "^5.0.18"
+    "@types/mongoose": "^5.0.18",
+    "ts-loader": "^4.1.0",
+    "ts-node": "^4.1.0",
+    "tsconfig-paths": "^3.1.1",
+    "tslint": "5.3.2"
   }
 }
