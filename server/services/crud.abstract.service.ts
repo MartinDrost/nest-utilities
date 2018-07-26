@@ -1,4 +1,4 @@
-import deepAssign from "deep-assign";
+import _ from "lodash";
 import { ObjectID } from "mongodb";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
 
@@ -62,13 +62,14 @@ export abstract class CrudService<IModel extends Document> {
    * @param modelItem
    */
   public async update(modelItem: IModel, ...args: any[]): Promise<IModel> {
-    let existing = await this.get(modelItem._id);
+    const existing = await this.get(modelItem._id);
     if (existing === null) {
       throw new Error("No model item found with the given id");
     }
 
-    existing = deepAssign(existing, modelItem) as IModel;
-    return existing.save();
+    return _
+      .mergeWith(existing, modelItem, (obj, src) => (!_.isNil(src) ? src : obj))
+      .save();
   }
 
   /**

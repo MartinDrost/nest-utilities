@@ -1,7 +1,7 @@
 import { ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import XLSX from "xlsx/types";
+import XLSX from "xlsx";
 
 @Injectable()
 export class CsvInterceptor implements NestInterceptor {

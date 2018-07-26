@@ -1,10 +1,10 @@
 {
   "name": "nest-utilities",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "",
-  "main": "index.ts",
+  "main": "index.js",
   "scripts": {
-    "prepublish": "tsc",
+    "pepare": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,15 +18,10 @@
   },
   "homepage": "https://github.com/MartinDrost/nest-utilities#readme",
   "dependencies": {
-    "@nestjs/common": "^5.0.0-beta.6",
-    "@nestjs/core": "^5.0.0-beta.6",
-    "@nestjs/microservices": "^5.0.0-beta.6",
-    "@nestjs/testing": "^5.0.0-beta.6",
-    "@nestjs/websockets": "^5.0.0-beta.6",
-    "fastify-formbody": "^2.0.0",
+    "@nestjs/common": "^5.0.0",
+    "@nestjs/core": "^5.0.0",
     "typescript": "^2.6.2",
     "reflect-metadata": "^0.1.12",
-    "deep-assign": "^2.0.0",
     "rxjs": "^6.1.0",
     "mongoose": "^5.1.6",
     "xlsx": "^0.13.1",
@@ -34,10 +29,15 @@
     "lodash-es": "^4.17.10"
   },
   "devDependencies": {
+    "@types/express": "^4.0.39",
+    "@types/jest": "^21.1.8",
+    "@types/node": "^9.3.0",
+    "@types/supertest": "^2.0.4",
     "@types/deep-assign": "^0.1.1",
     "@types/lodash": "^4.14.109",
     "@types/lodash-es": "^4.17.0",
     "@types/mongoose": "^5.0.18",
+    "@types/xlsx": "0.0.36",
     "ts-loader": "^4.1.0",
     "ts-node": "^4.1.0",
     "tsconfig-paths": "^3.1.1",

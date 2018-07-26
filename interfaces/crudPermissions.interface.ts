@@ -1,8 +1,8 @@
-import { CanActivate } from "@nestjs/common";
+import { CrudPermission } from "./crudPermission.interface";
 
 export interface CrudPermissions {
-  create: CanActivate;
-  read: CanActivate;
-  update: CanActivate;
-  delete: CanActivate;
+  create?: CrudPermission;
+  read?: CrudPermission;
+  update?: CrudPermission;
+  delete?: CrudPermission;
 }
