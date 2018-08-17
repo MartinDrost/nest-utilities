@@ -51,10 +51,12 @@ export abstract class CrudService<IModel extends Document> {
    * Get a modelItem by its id
    * @param id
    */
-  public getMany(ids: string[], ...args: any[]): Promise<IModel[]> {
-    return this.model
+  public async getMany(ids: string[], ...args: any[]): Promise<IModel[]> {
+    const models = await this.model
       .find({ _id: ids, isRemoved: { $in: [false, null] } })
       .exec();
+
+    return _.flatten([models]);
   }
 
   /**
@@ -67,9 +69,11 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
-    return _
-      .mergeWith(existing, modelItem, (obj, src) => (!_.isNil(src) ? src : obj))
-      .save();
+    return _.mergeWith(
+      existing,
+      modelItem,
+      (obj, src) => (!_.isNil(src) ? src : obj)
+    ).save();
   }
 
   /**
@@ -164,9 +168,12 @@ export abstract class CrudService<IModel extends Document> {
             Array.isArray(reference[endpoint]) ||
             arrays.indexOf(path) !== -1
           ) {
-            reference[endpoint] = ((reference[endpoint] as any[]) || []).filter(
-              item => item instanceof ObjectID === false
-            );
+            const array = _.flatten([reference]);
+            array.map(index => {
+              index[endpoint] = ((index[endpoint] as any[]) || []).filter(
+                item => item instanceof ObjectID === false
+              );
+            });
           } else if (reference[endpoint] instanceof ObjectID === true) {
             reference[endpoint] = null;
           }

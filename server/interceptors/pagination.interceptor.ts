@@ -12,7 +12,7 @@ export class PaginationInterceptor implements NestInterceptor {
    */
   intercept(
     context: ExecutionContext,
-    stream$: Observable<any>,
+    stream$: Observable<any>
   ): Observable<any> {
     const queryParams = context.getArgByIndex(0).query;
     const offset = queryParams.offset;
@@ -25,11 +25,22 @@ export class PaginationInterceptor implements NestInterceptor {
           const response = context.switchToHttp().getResponse();
 
           if (Array.isArray(value)) {
+            const exposeHeaders = ["X-total-count"];
+            const existingHeaders = (response.Headers || {})[
+              "Access-Control-Expose-Headers"
+            ];
+            if (existingHeaders) {
+              exposeHeaders.push(existingHeaders);
+            }
+            response.header(
+              "Access-Control-Expose-Headers",
+              exposeHeaders.join(", ")
+            );
             response.header("X-total-count", value.length);
             value = value.splice(offset || 0, limit || value.length);
           }
           return value;
-        }),
+        })
       );
     }
     return stream$;
