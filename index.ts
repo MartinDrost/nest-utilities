@@ -7,5 +7,6 @@ export {
   PaginationInterceptor,
   ExceptionInterceptor,
   SortInterceptor,
-  ContextInterceptor
+  ContextInterceptor,
+  CacheInterceptor
 } from "./server/interceptors";
