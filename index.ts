@@ -8,5 +8,5 @@ export {
   ExceptionInterceptor,
   SortInterceptor,
   ContextInterceptor,
-  CacheInterceptor
+  FilterInterceptor
 } from "./server/interceptors";
