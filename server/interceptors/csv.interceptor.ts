@@ -7,6 +7,7 @@ import XLSX from "xlsx";
 export class CsvInterceptor implements NestInterceptor {
   /**
    * Return fetched data in csv format
+   * f.e: ..?csv
    * @param context
    * @param stream$
    */
@@ -17,33 +18,35 @@ export class CsvInterceptor implements NestInterceptor {
     const queryParams = context.getArgByIndex(0).query;
     const csv = queryParams.csv;
 
-    if (csv !== undefined && csv !== "false") {
-      return stream$.pipe(
-        map(value => {
-          // abort if the response is not an array
-          if (!Array.isArray(value)) {
-            return value;
-          }
-
-          // trigger toJSON method and filter subarrays
-          value = JSON.parse(JSON.stringify(value));
-          value = value.map((item: any) => {
-            for (const key in item) {
-              if (Array.isArray(item[key]) || item[key] === null) {
-                delete item[key];
-              }
-            }
-            return item;
-          });
-
-          const response = context.switchToHttp().getResponse();
-          response.contentType("application/csv");
-
-          const sheet = XLSX.utils.json_to_sheet(value);
-          return XLSX.utils.sheet_to_csv(sheet);
-        })
-      );
+    // return if the interceptor is not triggered
+    if ([undefined, "false"].indexOf(csv) !== -1) {
+      return stream$;
     }
-    return stream$;
+
+    return stream$.pipe(
+      map(value => {
+        // abort if the response is not an array
+        if (!Array.isArray(value)) {
+          return value;
+        }
+
+        // trigger toJSON method and filter subarrays
+        value = JSON.parse(JSON.stringify(value));
+        value = value.map((item: any) => {
+          for (const key in item) {
+            if (Array.isArray(item[key]) || item[key] === null) {
+              delete item[key];
+            }
+          }
+          return item;
+        });
+
+        const response = context.switchToHttp().getResponse();
+        response.contentType("application/csv");
+
+        const sheet = XLSX.utils.json_to_sheet(value);
+        return XLSX.utils.sheet_to_csv(sheet);
+      })
+    );
   }
 }
