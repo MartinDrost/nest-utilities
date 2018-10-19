@@ -1,6 +1,6 @@
 {
   "name": "nest-utilities",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -20,23 +20,26 @@
   "dependencies": {
     "@nestjs/common": "^5.0.0",
     "@nestjs/core": "^5.0.0",
-    "typescript": "^2.6.2",
+    "@nestjs/websockets": "^5.4.0",
+    "lodash": "^4.17.10",
+    "lodash-es": "^4.17.10",
+    "mongoose": "^5.1.6",
     "reflect-metadata": "^0.1.12",
     "rxjs": "^6.1.0",
-    "mongoose": "^5.1.6",
-    "xlsx": "^0.13.1",
-    "lodash": "^4.17.10",
-    "lodash-es": "^4.17.10"
+    "typescript": "^2.6.2",
+    "ws": "^6.1.0",
+    "xlsx": "^0.13.1"
   },
   "devDependencies": {
+    "@types/deep-assign": "^0.1.1",
     "@types/express": "^4.0.39",
     "@types/jest": "^21.1.8",
-    "@types/node": "^9.3.0",
-    "@types/supertest": "^2.0.4",
-    "@types/deep-assign": "^0.1.1",
     "@types/lodash": "^4.14.109",
     "@types/lodash-es": "^4.17.0",
     "@types/mongoose": "^5.0.18",
+    "@types/node": "^9.3.0",
+    "@types/supertest": "^2.0.4",
+    "@types/ws": "^6.0.1",
     "@types/xlsx": "0.0.36",
     "ts-loader": "^4.1.0",
     "ts-node": "^4.1.0",
