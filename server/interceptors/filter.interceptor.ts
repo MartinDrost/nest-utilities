@@ -40,7 +40,10 @@ export class FilterInterceptor implements NestInterceptor {
               const itemValue = _get(item, filterKey);
               if (
                 [null, undefined].indexOf(itemValue) !== -1 ||
-                itemValue.toLowerCase().indexOf(filter[filterKey]) === -1
+                itemValue
+                  .toString()
+                  .toLowerCase()
+                  .indexOf(filter[filterKey]) === -1
               ) {
                 valid = false;
                 break;
