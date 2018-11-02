@@ -39,7 +39,8 @@ export abstract class WsRestProxy implements OnGatewayConnection {
     try {
       const eventParts = event.split(" ");
       const config = this.getAxiosConfig(client);
-      const url = this.parseUrl(`${this.serverHost}/${eventParts[1]}`, payload);
+      const parsedEvent = this.parseUrl(`${eventParts[1]}`, payload);
+      const url = `${this.serverHost}/${parsedEvent}`;
 
       // figure out which request has to be executed
       let request: Observable<AxiosResponse> = null;
@@ -57,7 +58,7 @@ export abstract class WsRestProxy implements OnGatewayConnection {
       const response = await request.toPromise();
       client.send(
         JSON.stringify({
-          event,
+          event: parsedEvent.split("?")[0],
           data: response.data
         })
       );
