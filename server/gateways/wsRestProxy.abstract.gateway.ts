@@ -45,11 +45,11 @@ export abstract class WsRestProxy implements OnGatewayConnection {
       // figure out which request has to be executed
       let request: Observable<AxiosResponse> = null;
       if (eventParts[0] === "POST") {
-        request = this.http.post(url, config, payload.body);
+        request = this.http.post(url, payload.body, config);
       } else if (eventParts[0] === "GET") {
         request = this.http.get(url, config);
       } else if (eventParts[0] === "PUT") {
-        request = this.http.put(url, config, payload.body);
+        request = this.http.put(url, payload.body, config);
       } else if (eventParts[0] === "DELETE") {
         request = this.http.delete(url, config);
       }
