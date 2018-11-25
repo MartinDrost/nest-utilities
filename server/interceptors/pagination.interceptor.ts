@@ -44,10 +44,11 @@ export class PaginationInterceptor implements NestInterceptor {
             "Access-Control-Expose-Headers",
             exposeHeaders.join(", ")
           );
-          if (!response.header("X-total-count")) {
-            response.header("X-total-count", value.length);
-          }
-          value = value.splice(offset || 0, limit || value.length);
+          response.header("X-total-count", value.length);
+          value = value.slice(
+            offset || 0,
+            offset || 0 + (limit || value.length)
+          );
         }
         return value;
       })
