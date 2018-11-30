@@ -47,7 +47,7 @@ export class PaginationInterceptor implements NestInterceptor {
           response.header("X-total-count", value.length);
           value = value.slice(
             +offset || 0,
-            (+offset || 0) + (limit || value.length)
+            (+offset || 0) + (+limit || value.length)
           );
         }
         return value;
