@@ -10,6 +10,10 @@ export abstract class CrudService<IModel extends Document> {
    * @param modelItem
    */
   public create(modelItem: IModel, ...args: any[]): Promise<IModel> {
+    // make sure no leftover id exists
+    delete modelItem._id;
+    delete modelItem.id;
+
     return new this.model(modelItem).save();
   }
 
@@ -69,10 +73,8 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
-    return _.mergeWith(
-      existing,
-      modelItem,
-      (obj, src) => (!_.isNil(src) ? src : obj)
+    return _.mergeWith(existing, modelItem, (obj, src) =>
+      !_.isNil(src) ? src : obj
     ).save();
   }
 
