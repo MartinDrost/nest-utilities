@@ -128,6 +128,10 @@ export abstract class CrudService<IModel extends Document> {
     match: any = { isRemoved: { $in: [false, null] } },
     ...args: any[]
   ): Promise<IModel> {
+    if (modelItem == null) {
+      return null;
+    }
+
     // create deeppopulated options
     const options = [] as ModelPopulateOptions[];
     for (const path of paths) {
