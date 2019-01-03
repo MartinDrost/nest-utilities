@@ -9,7 +9,7 @@ import {
   Param,
   Post,
   Put,
-  Req,
+  Req
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Request } from "express";
@@ -21,7 +21,7 @@ import { CrudService } from "../services/crud.abstract.service";
 
 export abstract class CrudController<IModel extends Document> {
   constructor(
-    private service: CrudService<IModel>,
+    private crudService: CrudService<IModel>,
     private permissions: CrudPermissions = {}
   ) {}
 
@@ -33,15 +33,15 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.create, request["context"]);
 
-    const created = await this.service.create(model as IModel);
-    return await this.service.populate(created);
+    const created = await this.crudService.create(model as IModel);
+    return await this.crudService.populate(created);
   }
 
   @Get()
   async getAll(@Req() request: Request, ...args: any[]): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    return await this.service.getAll();
+    return await this.crudService.getAll();
   }
 
   @Get(":id")
@@ -52,8 +52,8 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    const fetched = await this.service.get(params.id);
-    return await this.service.populate(fetched as IModel);
+    const fetched = await this.crudService.get(params.id);
+    return await this.crudService.populate(fetched as IModel);
   }
 
   @Get("many/:ids")
@@ -64,8 +64,8 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    const fetched = await this.service.getMany(params.ids.split(","));
-    return await this.service.populateList(fetched);
+    const fetched = await this.crudService.getMany(params.ids.split(","));
+    return await this.crudService.populateList(fetched);
   }
 
   @Put()
@@ -76,8 +76,8 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request["context"]);
 
-    const updated = await this.service.update(model as IModel);
-    return await this.service.populate(updated);
+    const updated = await this.crudService.update(model as IModel);
+    return await this.crudService.populate(updated);
   }
 
   @Delete(":id")
@@ -88,8 +88,8 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.delete, request["context"]);
 
-    const deleted = await this.service.delete(params.id);
-    return await this.service.populate(deleted as IModel);
+    const deleted = await this.crudService.delete(params.id);
+    return await this.crudService.populate(deleted as IModel);
   }
 
   /**
