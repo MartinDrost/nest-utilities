@@ -3,7 +3,7 @@ import { ObjectID } from "mongodb";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
 
 export abstract class CrudService<IModel extends Document> {
-  constructor(private model: Model<IModel>) {}
+  constructor(private crudModel: Model<IModel>) {}
 
   /**
    * Save a new modelItem
@@ -14,7 +14,7 @@ export abstract class CrudService<IModel extends Document> {
     delete modelItem._id;
     delete modelItem.id;
 
-    return new this.model(modelItem).save();
+    return new this.crudModel(modelItem).save();
   }
 
   /**
@@ -38,7 +38,7 @@ export abstract class CrudService<IModel extends Document> {
    * Get all existing modelItems from the database
    */
   public getAll(...args: any[]): Promise<IModel[]> {
-    return this.model.find({ isRemoved: { $in: [false, null] } }).exec();
+    return this.crudModel.find({ isRemoved: { $in: [false, null] } }).exec();
   }
 
   /**
@@ -46,7 +46,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param id
    */
   public get(id: string, ...args: any[]): Promise<IModel | null> {
-    return this.model
+    return this.crudModel
       .findOne({ _id: id, isRemoved: { $in: [false, null] } })
       .exec();
   }
@@ -56,7 +56,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param id
    */
   public async getMany(ids: string[], ...args: any[]): Promise<IModel[]> {
-    const models = await this.model
+    const models = await this.crudModel
       .find({ _id: ids, isRemoved: { $in: [false, null] } })
       .exec();
 
@@ -83,7 +83,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param id
    */
   public delete(id: string, ...args: any[]): Promise<IModel | null> {
-    return this.model.findByIdAndRemove(id).exec();
+    return this.crudModel.findByIdAndRemove(id).exec();
   }
 
   /**
@@ -91,7 +91,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param id
    */
   public hide(id: string, ...args: any[]): Promise<IModel | null> {
-    return this.model
+    return this.crudModel
       .findByIdAndUpdate(id, {
         $set: { isRemoved: true, removedAt: new Date() }
       })
