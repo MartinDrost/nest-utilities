@@ -33,8 +33,14 @@ export class SortInterceptor implements NestInterceptor {
             for (let field of sortFields) {
               const desc = field.indexOf("-") === -1 ? 1 : -1;
               field = field.replace("-", "");
-              const valueA = _get(a, field, -Infinity);
-              const valueB = _get(b, field, -Infinity);
+              let valueA = _get(a, field, -Infinity);
+              let valueB = _get(b, field, -Infinity);
+
+              // set to lowercase if applicable
+              if (typeof valueA === "string" && typeof valueB === "string") {
+                valueA = valueA.toLowerCase();
+                valueB = valueB.toLowerCase();
+              }
 
               // return a position change if the fields differ
               if (valueA !== valueB) {
