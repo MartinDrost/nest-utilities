@@ -14,7 +14,7 @@ export class ExceptionInterceptor implements NestInterceptor {
     stack: false
   };
 
-  constructor(options: { stack: boolean }) {
+  constructor(options: { stack?: boolean } = {}) {
     this.options = {
       ...this.options,
       ...options

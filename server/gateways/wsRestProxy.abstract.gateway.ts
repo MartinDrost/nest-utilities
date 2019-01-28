@@ -56,7 +56,7 @@ export abstract class WsRestProxy implements OnGatewayConnection {
 
       // await and send the response
       const response = await request.toPromise();
-      client.send(
+      client["send"](
         JSON.stringify({
           event: parsedEvent.split("?")[0],
           data: response.data
@@ -64,7 +64,7 @@ export abstract class WsRestProxy implements OnGatewayConnection {
       );
     } catch (err) {
       // send the error code
-      client.send(
+      client["send"](
         JSON.stringify({
           event: 0,
           data: err.response.data
