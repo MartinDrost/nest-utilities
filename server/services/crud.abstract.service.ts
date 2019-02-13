@@ -144,7 +144,7 @@ export abstract class CrudService<IModel extends Document> {
       .then(model => {
         // change all undefined values to null
         for (const path of paths) {
-          if (_.get(model, path) === null) {
+          if (_.get(model, path) === undefined) {
             _.set(model, path, null);
           }
         }
