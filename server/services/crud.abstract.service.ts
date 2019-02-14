@@ -90,12 +90,8 @@ export abstract class CrudService<IModel extends Document> {
    * Hide a modelItem containing the given id
    * @param id
    */
-  public hide(id: string, ...args: any[]): Promise<IModel | null> {
-    return this.crudModel
-      .findByIdAndUpdate(id, {
-        $set: { isRemoved: true, removedAt: new Date() }
-      })
-      .exec();
+  public hide(_id: string, ...args: any[]): Promise<IModel | null> {
+    return this.update({ _id, isRemoved: true, removedAt: new Date() } as any);
   }
 
   /**
