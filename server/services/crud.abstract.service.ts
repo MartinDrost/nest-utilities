@@ -150,7 +150,7 @@ export abstract class CrudService<IModel extends Document> {
           _.set(
             model,
             array,
-            _.get(model, array, []).filter(
+            (_.get(model, array) || []).filter(
               item => item instanceof ObjectID === false
             )
           );
