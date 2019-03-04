@@ -1,7 +1,6 @@
 ![npm](https://img.shields.io/npm/dt/nest-utilities.svg)
 ![npm](https://img.shields.io/npm/v/nest-utilities.svg)
 
-
 ## Introduction
 
 The nest-utilities package is meant as a helper layer for your Nest application. The package offers classes to create consistency in your code and to prevent repeating menial tasks and repetetive coding like writing CRUD functionalities.
@@ -149,5 +148,6 @@ The following interceptors are available:
 | FilterInterceptor     | Used to filter returned object arrays by key values. "..user?filter[name]=john" would only return users with "john" in their name. Multiple filters are possible by adding additional query parameters. |
 | SortInterceptor       | Used to sort returned object arrays by key values. "..user?sort=name,-age" would sort the response on the users names ascending and age descending.                                                     |
 | PaginationInterceptor | Used to implement pagination. "..user?offset=5&limit=10" would return a maximum of 10 users while skipping the first 5.                                                                                 |
+| PickInterceptor       | Pick a certain selection of attributes from a response omitting the rest. f.e.: ..user?pick=firstName,lastName,children.firstName                                                                       |
 | CsvInterceptor        | Used to return the response array in CSV format instead of JSON. "..user?csv" would return a CSV.                                                                                                       |
 | ExceptionInterceptor  | Catches all uncaught exceptions and throws them as status 400 HttpExceptions.                                                                                                                           |

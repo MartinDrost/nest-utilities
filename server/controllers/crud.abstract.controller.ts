@@ -96,7 +96,7 @@ export abstract class CrudController<IModel extends Document> {
    * Check permissions based on the provided settings
    * @param permission
    */
-  private checkPermissions(
+  protected checkPermissions(
     permission: CrudPermission,
     context: ExecutionContext
   ): void {
