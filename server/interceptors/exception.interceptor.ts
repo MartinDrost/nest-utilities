@@ -36,14 +36,14 @@ export class ExceptionInterceptor implements NestInterceptor {
         if (this.options.stack) {
           return throwError(
             err instanceof HttpException
-              ? err.stack
+              ? new HttpException(err.stack, err.getStatus())
               : new HttpException(err.stack, HttpStatus.BAD_REQUEST)
           );
         }
 
         return throwError(
           err instanceof HttpException
-            ? err.message
+            ? err
             : new HttpException(err.message, HttpStatus.BAD_REQUEST)
         );
       })
