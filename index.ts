@@ -16,5 +16,6 @@ export {
   SortInterceptor,
   ContextInterceptor,
   FilterInterceptor,
-  PickInterceptor
+  PickInterceptor,
+  SearchInterceptor
 } from "./server/interceptors";

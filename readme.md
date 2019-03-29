@@ -132,6 +132,8 @@ Nest-utilities offers a number of interceptors to make retrieving data more cons
 // order and enable global interceptors (order does matter)
 app.useGlobalInterceptors(new ContextInterceptor());
 app.useGlobalInterceptors(new FilterInterceptor());
+app.useGlobalInterceptors(new SearchInterceptor());
+app.useGlobalInterceptors(new PickInterceptor());
 app.useGlobalInterceptors(new SortInterceptor());
 app.useGlobalInterceptors(new PaginationInterceptor());
 app.useGlobalInterceptors(new CsvInterceptor());
@@ -142,12 +144,13 @@ await app.listen(3000);
 
 The following interceptors are available:
 
-| Name                  | Description                                                                                                                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ContextInterceptor    | Required to deliver parameters to the guards when using the CrudController.                                                                                                                             |
-| FilterInterceptor     | Used to filter returned object arrays by key values. "..user?filter[name]=john" would only return users with "john" in their name. Multiple filters are possible by adding additional query parameters. |
-| SortInterceptor       | Used to sort returned object arrays by key values. "..user?sort=name,-age" would sort the response on the users names ascending and age descending.                                                     |
-| PaginationInterceptor | Used to implement pagination. "..user?offset=5&limit=10" would return a maximum of 10 users while skipping the first 5.                                                                                 |
-| PickInterceptor       | Pick a certain selection of attributes from a response omitting the rest. f.e.: ..user?pick=firstName,lastName,children.firstName                                                                       |
-| CsvInterceptor        | Used to return the response array in CSV format instead of JSON. "..user?csv" would return a CSV.                                                                                                       |
-| ExceptionInterceptor  | Catches all uncaught exceptions and throws them as status 400 HttpExceptions.                                                                                                                           |
+| Name                  | Description                                                                                                                                                                                                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ContextInterceptor    | Required to deliver parameters to the guards when using the CrudController.                                                                                                                                                                                                             |
+| FilterInterceptor     | Used to filter returned object arrays by key values. "..user?filter[name]=john" would only return users with "john" in their name. Multiple filters are possible by adding additional query parameters.                                                                                 |
+| SortInterceptor       | Used to sort returned object arrays by key values. "..user?sort=name,-age" would sort the response on the users names ascending and age descending.                                                                                                                                     |
+| PaginationInterceptor | Used to implement pagination. "..user?offset=5&limit=10" would return a maximum of 10 users while skipping the first 5.                                                                                                                                                                 |
+| PickInterceptor       | Pick a certain selection of attributes from a response omitting the rest. f.e.: ..user?pick=firstName,lastName,children.firstName                                                                                                                                                       |
+| SearchInterceptor     | Search an array of object for ones containing the given query in the provided attributes (searchScope). Note that the searchScope parameter is optional and that the whole object will be searched if it's not provided. f.e.: ..user?search=cat&searchScope=firstName,lastName,address |
+| CsvInterceptor        | Used to return the response array in CSV format instead of JSON. "..user?csv" would return a CSV.                                                                                                                                                                                       |
+| ExceptionInterceptor  | Catches all uncaught exceptions and throws them as status 400 HttpExceptions.                                                                                                                                                                                                           |
