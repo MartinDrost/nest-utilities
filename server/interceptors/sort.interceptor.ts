@@ -36,6 +36,14 @@ export class SortInterceptor implements NestInterceptor {
               let valueA = _get(a, field, -Infinity);
               let valueB = _get(b, field, -Infinity);
 
+              // change undefined strings to empty ones so they get sorted correctly
+              if (typeof valueA === "string" && valueB === -Infinity) {
+                valueB = "";
+              }
+              if (typeof valueB === "string" && valueA === -Infinity) {
+                valueA = "";
+              }
+
               // set to lowercase if applicable
               if (typeof valueA === "string" && typeof valueB === "string") {
                 valueA = valueA.toLowerCase();
