@@ -1,4 +1,9 @@
-import { ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import {
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  CallHandler
+} from "@nestjs/common";
 import _get from "lodash/get";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
@@ -9,21 +14,18 @@ export class FilterInterceptor implements NestInterceptor {
    * Filter the response values based on queryParams.
    * f.e: ..?filter[key1]=match1&filter[key2.key3]=match2
    * @param context
-   * @param stream$
+   * @param next
    */
-  intercept(
-    context: ExecutionContext,
-    stream$: Observable<any>
-  ): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const queryParams = context.getArgByIndex(0).query;
     const filter = queryParams.filter;
 
     // return if the interceptor is not triggered
     if ([undefined, null].indexOf(filter) !== -1) {
-      return stream$;
+      return next.handle();
     }
 
-    return stream$.pipe(
+    return next.handle().pipe(
       map(value => {
         if (Array.isArray(value)) {
           // set all filter values to lowercase

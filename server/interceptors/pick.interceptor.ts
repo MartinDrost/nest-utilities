@@ -1,4 +1,9 @@
-import { ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import {
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  CallHandler
+} from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import _pick from "lodash/pick";
@@ -9,25 +14,22 @@ export class PickInterceptor implements NestInterceptor {
    * Pick a certain selection of attributes from a response omitting the rest.
    * f.e.: ..user?pick=firstName,lastName,children.firstName
    * @param context
-   * @param stream$
+   * @param next
    */
-  intercept(
-    context: ExecutionContext,
-    stream$: Observable<any>,
-  ): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const queryParams = context.getArgByIndex(0).query;
     const pick = queryParams.pick;
 
     // manipulate the return data if the pick parameter is given
     if (pick) {
-      return stream$.pipe(
+      return next.handle().pipe(
         map(value => {
           const attributes = (pick || "").split(",");
           return this.deepPick(value, attributes);
-        }),
+        })
       );
     }
-    return stream$;
+    return next.handle();
   }
 
   /**

@@ -1,4 +1,9 @@
-import { ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import {
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  CallHandler
+} from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import XLSX from "xlsx";
@@ -9,21 +14,18 @@ export class CsvInterceptor implements NestInterceptor {
    * Return fetched data in csv format
    * f.e: ..?csv
    * @param context
-   * @param stream$
+   * @param next
    */
-  intercept(
-    context: ExecutionContext,
-    stream$: Observable<any>
-  ): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const queryParams = context.getArgByIndex(0).query;
     const csv = queryParams.csv;
 
     // return if the interceptor is not triggered
     if ([undefined, "false"].indexOf(csv) !== -1) {
-      return stream$;
+      return next.handle();
     }
 
-    return stream$.pipe(
+    return next.handle().pipe(
       map(value => {
         // abort if the response is not an array
         if (!Array.isArray(value)) {

@@ -1,4 +1,9 @@
-import { ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import {
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  CallHandler
+} from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import _pick from "lodash/pick";
@@ -10,18 +15,15 @@ export class SearchInterceptor implements NestInterceptor {
    * Search an array of object for ones containing the given query.
    * f.e.: ..user?search=cat&searchScope=firstName,lastName,address
    * @param context
-   * @param stream$
+   * @param next
    */
-  intercept(
-    context: ExecutionContext,
-    stream$: Observable<any>
-  ): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const queryParams = context.getArgByIndex(0).query;
     const { search, searchScope } = queryParams;
 
     // manipulate the return data if the search parameter is given
     if (search) {
-      return stream$.pipe(
+      return next.handle().pipe(
         map(value => {
           const attributes = searchScope ? searchScope.split(",") : [];
           if (Array.isArray(value)) {
@@ -33,7 +35,7 @@ export class SearchInterceptor implements NestInterceptor {
         })
       );
     }
-    return stream$;
+    return next.handle();
   }
 
   /**

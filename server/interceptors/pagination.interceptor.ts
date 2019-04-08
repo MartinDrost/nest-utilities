@@ -1,4 +1,9 @@
-import { ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import {
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  CallHandler
+} from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -9,12 +14,9 @@ export class PaginationInterceptor implements NestInterceptor {
    * and the response is an array.
    * f.e: ..?offset=5&limit=10
    * @param context
-   * @param stream$
+   * @param next
    */
-  intercept(
-    context: ExecutionContext,
-    stream$: Observable<any>
-  ): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const queryParams = context.getArgByIndex(0).query;
     const offset = queryParams.offset;
     const limit = queryParams.limit;
@@ -24,11 +26,11 @@ export class PaginationInterceptor implements NestInterceptor {
       [undefined, null].indexOf(offset) !== -1 &&
       [undefined, null].indexOf(limit) !== -1
     ) {
-      return stream$;
+      return next.handle();
     }
 
     // slice the response
-    return stream$.pipe(
+    return next.handle().pipe(
       map(value => {
         const response = context.switchToHttp().getResponse();
 

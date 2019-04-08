@@ -3,7 +3,8 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
-  NestInterceptor
+  NestInterceptor,
+  CallHandler
 } from "@nestjs/common";
 import { Observable, throwError } from "rxjs";
 import { catchError } from "rxjs/operators";
@@ -25,13 +26,10 @@ export class ExceptionInterceptor implements NestInterceptor {
    * Catch exceptions and default to a BAD_REQUEST HttpException if
    * none is defined.
    * @param context
-   * @param stream$
+   * @param next
    */
-  intercept(
-    context: ExecutionContext,
-    stream$: Observable<any>
-  ): Observable<any> {
-    return stream$.pipe(
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next.handle().pipe(
       catchError((err: Error) => {
         if (this.options.stack) {
           return throwError(
