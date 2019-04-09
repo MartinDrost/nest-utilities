@@ -16,7 +16,10 @@ export class PaginationInterceptor implements NestInterceptor {
    * @param context
    * @param next
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): ReturnType<NestInterceptor["intercept"]> {
     const queryParams = context.getArgByIndex(0).query;
     const offset = queryParams.offset;
     const limit = queryParams.limit;

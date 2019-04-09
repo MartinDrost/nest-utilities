@@ -28,14 +28,17 @@ export class ExceptionInterceptor implements NestInterceptor {
    * @param context
    * @param next
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): ReturnType<NestInterceptor["intercept"]> {
     return next.handle().pipe(
       catchError((err: Error) => {
         if (this.options.stack) {
           return throwError(
             err instanceof HttpException
-              ? new HttpException(err.stack, err.getStatus())
-              : new HttpException(err.stack, HttpStatus.BAD_REQUEST)
+              ? new HttpException(err.stack || "", err.getStatus())
+              : new HttpException(err.stack || "", HttpStatus.BAD_REQUEST)
           );
         }
 

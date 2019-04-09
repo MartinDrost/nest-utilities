@@ -19,3 +19,5 @@ export {
   PickInterceptor,
   SearchInterceptor
 } from "./server/interceptors";
+
+export { useAllInterceptors } from "./server/helpers";

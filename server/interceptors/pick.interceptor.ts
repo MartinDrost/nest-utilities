@@ -16,7 +16,10 @@ export class PickInterceptor implements NestInterceptor {
    * @param context
    * @param next
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): ReturnType<NestInterceptor["intercept"]> {
     const queryParams = context.getArgByIndex(0).query;
     const pick = queryParams.pick;
 
@@ -37,14 +40,17 @@ export class PickInterceptor implements NestInterceptor {
    * @param value
    * @param attributes
    */
-  private deepPick(value: object | any[], attributes = []): object | any[] {
+  private deepPick(
+    value: object | any[],
+    attributes: string[] = []
+  ): object | any[] {
     // check if the attributes contain nested targets
     const attributeSet = new Set();
     const nestedAttributes: { [attribute: string]: string[] } = {};
     for (const attribute of attributes) {
       if (attribute.includes(".")) {
         const nested = attribute.split(".");
-        const key = nested.shift();
+        const key = nested.shift() as string;
 
         nestedAttributes[key] = nestedAttributes[key] || [];
         nestedAttributes[key].push(nested.join("."));

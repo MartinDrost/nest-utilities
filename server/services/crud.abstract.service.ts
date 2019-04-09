@@ -124,8 +124,8 @@ export abstract class CrudService<IModel extends Document> {
     match: any = { isRemoved: { $in: [false, null] } },
     ...args: any[]
   ): Promise<IModel> {
-    if (modelItem == null) {
-      return null;
+    if (modelItem === null) {
+      return modelItem;
     }
 
     // create deeppopulated options
@@ -151,7 +151,7 @@ export abstract class CrudService<IModel extends Document> {
             model,
             array,
             (_.get(model, array) || []).filter(
-              item => item instanceof ObjectID === false
+              (item: any) => item instanceof ObjectID === false
             )
           );
         }
@@ -178,7 +178,7 @@ export abstract class CrudService<IModel extends Document> {
 
     // separate the path in the current position and the journey ahead
     const dismembered = path.split(".");
-    const position = dismembered.shift();
+    const position = dismembered.shift() as string;
     const journey = dismembered.join(".");
 
     // check if the current position has already been mapped

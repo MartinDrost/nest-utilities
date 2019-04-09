@@ -142,6 +142,15 @@ app.useGlobalInterceptors(new ExceptionInterceptor());
 await app.listen(3000);
 ```
 
+Or, if you want all interceptors enabled:
+
+```js
+// enable all interceptors in one line
+useAllInterceptors(app);
+
+await app.listen(3000);
+```
+
 The following interceptors are available:
 
 | Name                  | Description                                                                                                                                                                                                                                                                             |

@@ -16,7 +16,10 @@ export class CsvInterceptor implements NestInterceptor {
    * @param context
    * @param next
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): ReturnType<NestInterceptor["intercept"]> {
     const queryParams = context.getArgByIndex(0).query;
     const csv = queryParams.csv;
 

@@ -43,7 +43,7 @@ export abstract class WsRestProxy implements OnGatewayConnection {
       const url = `${this.serverHost}/${parsedEvent}`;
 
       // figure out which request has to be executed
-      let request: Observable<AxiosResponse> = null;
+      let request: Observable<AxiosResponse>;
       if (eventParts[0] === "POST") {
         request = this.http.post(url, payload.body, config);
       } else if (eventParts[0] === "GET") {
@@ -52,6 +52,8 @@ export abstract class WsRestProxy implements OnGatewayConnection {
         request = this.http.put(url, payload.body, config);
       } else if (eventParts[0] === "DELETE") {
         request = this.http.delete(url, config);
+      } else {
+        throw Error("No valid method provided");
       }
 
       // await and send the response

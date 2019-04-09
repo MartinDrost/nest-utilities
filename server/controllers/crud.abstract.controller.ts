@@ -15,7 +15,7 @@ import { Reflector } from "@nestjs/core";
 import { Request } from "express";
 import { Document } from "mongoose";
 
-import { CrudPermission } from "../../interfaces";
+import { CrudPermission, NURequest } from "../../interfaces";
 import { CrudPermissions } from "../../interfaces/crudPermissions.interface";
 import { CrudService } from "../services/crud.abstract.service";
 
@@ -27,7 +27,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Post()
   async create(
-    @Req() request: Request,
+    @Req() request: NURequest,
     @Body() model: IModel,
     ...args: any[]
   ): Promise<IModel> {
@@ -38,7 +38,7 @@ export abstract class CrudController<IModel extends Document> {
   }
 
   @Get()
-  async getAll(@Req() request: Request, ...args: any[]): Promise<IModel[]> {
+  async getAll(@Req() request: NURequest, ...args: any[]): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
     return await this.crudService.getAll();
@@ -46,7 +46,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Get(":id")
   async get(
-    @Req() request: Request,
+    @Req() request: NURequest,
     @Param() params: any,
     ...args: any[]
   ): Promise<IModel> {
@@ -58,7 +58,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Get("many/:ids")
   async getMany(
-    @Req() request: Request,
+    @Req() request: NURequest,
     @Param() params: any,
     ...args: any[]
   ): Promise<IModel[]> {
@@ -70,7 +70,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Put()
   async update(
-    @Req() request: Request,
+    @Req() request: NURequest,
     @Body() model: IModel,
     ...args: any[]
   ): Promise<IModel> {
@@ -82,7 +82,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Delete(":id")
   async delete(
-    @Req() request: Request,
+    @Req() request: NURequest,
     @Param() params: any,
     ...args: any[]
   ): Promise<IModel> {
@@ -97,7 +97,7 @@ export abstract class CrudController<IModel extends Document> {
    * @param permission
    */
   protected checkPermissions(
-    permission: CrudPermission,
+    permission: CrudPermission | undefined,
     context: ExecutionContext
   ): void {
     if (!permission) {

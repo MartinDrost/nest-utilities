@@ -13,7 +13,10 @@ export class ContextInterceptor implements NestInterceptor {
    * @param context
    * @param next
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): ReturnType<NestInterceptor["intercept"]> {
     const request = context.switchToHttp().getRequest();
     request.context = context;
 

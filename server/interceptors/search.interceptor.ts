@@ -17,7 +17,10 @@ export class SearchInterceptor implements NestInterceptor {
    * @param context
    * @param next
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): ReturnType<NestInterceptor["intercept"]> {
     const queryParams = context.getArgByIndex(0).query;
     const { search, searchScope } = queryParams;
 
@@ -44,7 +47,11 @@ export class SearchInterceptor implements NestInterceptor {
    * @param query
    * @param attributes
    */
-  private deepSearch(item: object, query: string, attributes = []): boolean {
+  private deepSearch(
+    item: object,
+    query: string,
+    attributes: string[] = []
+  ): boolean {
     // get all nested attributes if none are given
     if (attributes.length === 0) {
       attributes = this.getNestedAttributes(item);
@@ -56,7 +63,7 @@ export class SearchInterceptor implements NestInterceptor {
     for (const attribute of attributes) {
       if (attribute.includes(".")) {
         const nested = attribute.split(".");
-        const key = nested.shift();
+        const key = nested.shift() as string;
 
         nestedAttributes[key] = nestedAttributes[key] || [];
         nestedAttributes[key].push(nested.join("."));
@@ -111,7 +118,7 @@ export class SearchInterceptor implements NestInterceptor {
    * @param item
    */
   private getNestedAttributes(item: object): string[] {
-    const attributes = [];
+    const attributes: string[] = [];
     for (const key of Object.keys(item)) {
       attributes.push(key);
 
