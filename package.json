@@ -1,6 +1,6 @@
 {
   "name": "nest-utilities",
-  "version": "6.0.22",
+  "version": "6.3.0",
   "description": "",
   "main": "index.js",
   "keywords": [
@@ -24,28 +24,22 @@
   },
   "homepage": "https://github.com/MartinDrost/nest-utilities#readme",
   "dependencies": {
-    "@nestjs/common": "6.0.5",
-    "@nestjs/core": "6.0.5",
-    "@nestjs/websockets": "6.0.5",
+    "@nestjs/common": "6.3.0",
+    "@nestjs/core": "6.3.0",
     "lodash": "4.17.11",
     "lodash-es": "4.17.10",
     "mongoose": "5.5.0",
     "reflect-metadata": "0.1.13",
     "rxjs": "6.4.0",
     "typescript": "3.4.2",
-    "ws": "6.1.0",
     "xlsx": "0.14.2"
   },
   "devDependencies": {
-    "@types/deep-assign": "^0.1.1",
     "@types/express": "^4.0.39",
-    "@types/jest": "^21.1.8",
     "@types/lodash": "^4.14.109",
     "@types/lodash-es": "^4.17.0",
     "@types/mongoose": "^5.3.25",
     "@types/node": "^9.3.0",
-    "@types/supertest": "^2.0.4",
-    "@types/ws": "^6.0.1",
     "@types/xlsx": "0.0.36",
     "ts-loader": "^4.1.0",
     "ts-node": "^4.1.0",
