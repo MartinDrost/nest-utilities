@@ -16,12 +16,12 @@ import { INestApplication } from "@nestjs/common";
  * @param app
  */
 export const useAllInterceptors = (app: INestApplication) => {
-  app.useGlobalInterceptors(new ContextInterceptor());
-  app.useGlobalInterceptors(new FilterInterceptor());
-  app.useGlobalInterceptors(new SearchInterceptor());
-  app.useGlobalInterceptors(new PickInterceptor());
-  app.useGlobalInterceptors(new SortInterceptor());
-  app.useGlobalInterceptors(new PaginationInterceptor());
-  app.useGlobalInterceptors(new CsvInterceptor());
   app.useGlobalInterceptors(new ExceptionInterceptor());
+  app.useGlobalInterceptors(new CsvInterceptor());
+  app.useGlobalInterceptors(new PaginationInterceptor());
+  app.useGlobalInterceptors(new SortInterceptor());
+  app.useGlobalInterceptors(new PickInterceptor());
+  app.useGlobalInterceptors(new SearchInterceptor());
+  app.useGlobalInterceptors(new FilterInterceptor());
+  app.useGlobalInterceptors(new ContextInterceptor());
 };

@@ -130,14 +130,14 @@ Nest-utilities offers a number of interceptors to make retrieving data more cons
 
 ```js
 // order and enable global interceptors (order does matter)
-app.useGlobalInterceptors(new ContextInterceptor());
-app.useGlobalInterceptors(new FilterInterceptor());
-app.useGlobalInterceptors(new SearchInterceptor());
-app.useGlobalInterceptors(new PickInterceptor());
-app.useGlobalInterceptors(new SortInterceptor());
-app.useGlobalInterceptors(new PaginationInterceptor());
-app.useGlobalInterceptors(new CsvInterceptor());
 app.useGlobalInterceptors(new ExceptionInterceptor());
+app.useGlobalInterceptors(new CsvInterceptor());
+app.useGlobalInterceptors(new PaginationInterceptor());
+app.useGlobalInterceptors(new SortInterceptor());
+app.useGlobalInterceptors(new PickInterceptor());
+app.useGlobalInterceptors(new SearchInterceptor());
+app.useGlobalInterceptors(new FilterInterceptor());
+app.useGlobalInterceptors(new ContextInterceptor());
 
 await app.listen(3000);
 ```
