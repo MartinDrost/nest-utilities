@@ -4,7 +4,6 @@ import {
   NestInterceptor,
   CallHandler
 } from "@nestjs/common";
-import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import _pick from "lodash/pick";
 import { isString, isNumber, isObject } from "util";
@@ -31,7 +30,11 @@ export class SearchInterceptor implements NestInterceptor {
           const attributes = searchScope ? searchScope.split(",") : [];
           if (Array.isArray(value)) {
             return value.filter(item =>
-              this.deepSearch(item, search.toLowerCase(), attributes)
+              this.deepSearch(
+                JSON.parse(JSON.stringify(item)),
+                search.toLowerCase(),
+                attributes
+              )
             );
           }
           return value;
@@ -58,7 +61,7 @@ export class SearchInterceptor implements NestInterceptor {
     }
 
     // check if the attributes contain nested targets
-    const attributeSet = new Set();
+    const attributeSet = new Set<string>();
     const nestedAttributes: { [attribute: string]: string[] } = {};
     for (const attribute of attributes) {
       if (attribute.includes(".")) {

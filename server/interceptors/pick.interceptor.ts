@@ -4,7 +4,6 @@ import {
   NestInterceptor,
   CallHandler
 } from "@nestjs/common";
-import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import _pick from "lodash/pick";
 
@@ -45,7 +44,7 @@ export class PickInterceptor implements NestInterceptor {
     attributes: string[] = []
   ): object | any[] {
     // check if the attributes contain nested targets
-    const attributeSet = new Set();
+    const attributeSet = new Set<string>();
     const nestedAttributes: { [attribute: string]: string[] } = {};
     for (const attribute of attributes) {
       if (attribute.includes(".")) {

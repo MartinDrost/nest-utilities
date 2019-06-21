@@ -5,7 +5,6 @@ import {
   CallHandler
 } from "@nestjs/common";
 import _get from "lodash/get";
-import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
 @Injectable()

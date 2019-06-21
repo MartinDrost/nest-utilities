@@ -6,7 +6,7 @@ import {
   NestInterceptor,
   CallHandler
 } from "@nestjs/common";
-import { Observable, throwError } from "rxjs";
+import { throwError } from "rxjs";
 import { catchError } from "rxjs/operators";
 
 @Injectable()
