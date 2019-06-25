@@ -44,7 +44,7 @@ export class ExceptionInterceptor implements NestInterceptor {
 
         return throwError(
           err instanceof HttpException
-            ? err
+            ? new HttpException(err.getResponse(), err.getStatus())
             : new HttpException(err.message, HttpStatus.BAD_REQUEST)
         );
       })
