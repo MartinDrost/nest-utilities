@@ -12,9 +12,7 @@ import {
   Req
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { Request } from "express";
 import { Document } from "mongoose";
-
 import { CrudPermission, NURequest } from "../../interfaces";
 import { CrudPermissions } from "../../interfaces/crudPermissions.interface";
 import { CrudService } from "../services/crud.abstract.service";
@@ -49,7 +47,7 @@ export abstract class CrudController<IModel extends Document> {
     @Req() request: NURequest,
     @Param() params: any,
     ...args: any[]
-  ): Promise<IModel> {
+  ): Promise<IModel | null> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
     const fetched = await this.crudService.get(params.id);
@@ -85,7 +83,7 @@ export abstract class CrudController<IModel extends Document> {
     @Req() request: NURequest,
     @Param() params: any,
     ...args: any[]
-  ): Promise<IModel> {
+  ): Promise<IModel | null> {
     this.checkPermissions(this.permissions.delete, request["context"]);
 
     const deleted = await this.crudService.delete(params.id);
