@@ -31,7 +31,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.create, request["context"]);
 
-    const created = await this.crudService.create(model as IModel);
+    const created = await this.crudService.create(model as IModel, request);
     return await this.crudService.populate(created);
   }
 
@@ -39,7 +39,7 @@ export abstract class CrudController<IModel extends Document> {
   async getAll(@Req() request: NURequest, ...args: any[]): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    return await this.crudService.getAll();
+    return await this.crudService.getAll(request);
   }
 
   @Get(":id")
@@ -50,7 +50,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel | null> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    const fetched = await this.crudService.get(params.id);
+    const fetched = await this.crudService.get(params.id, request);
     return await this.crudService.populate(fetched as IModel);
   }
 
@@ -62,7 +62,10 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    const fetched = await this.crudService.getMany(params.ids.split(","));
+    const fetched = await this.crudService.getMany(
+      params.ids.split(","),
+      request
+    );
     return await this.crudService.populateList(fetched);
   }
 
@@ -74,7 +77,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request["context"]);
 
-    const updated = await this.crudService.update(model as IModel);
+    const updated = await this.crudService.update(model as IModel, request);
     return await this.crudService.populate(updated);
   }
 
@@ -86,7 +89,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel | null> {
     this.checkPermissions(this.permissions.delete, request["context"]);
 
-    const deleted = await this.crudService.delete(params.id);
+    const deleted = await this.crudService.delete(params.id, request);
     return await this.crudService.populate(deleted as IModel);
   }
 
