@@ -45,7 +45,11 @@ export abstract class CrudService<IModel extends Document> {
    * Get a modelItem by its id
    * @param id
    */
-  public get(id: string, ...args: any[]): Promise<IModel | null> {
+  public async get(id: string, ...args: any[]): Promise<IModel | null> {
+    if (ObjectID.isValid(id) === false) {
+      return null;
+    }
+
     return this.crudModel
       .findOne({ _id: id, isRemoved: { $in: [false, null] } })
       .exec();
@@ -82,7 +86,11 @@ export abstract class CrudService<IModel extends Document> {
    * Delete a modelItem by its id
    * @param id
    */
-  public delete(id: string, ...args: any[]): Promise<IModel | null> {
+  public async delete(id: string, ...args: any[]): Promise<IModel | null> {
+    if (ObjectID.isValid(id) === false) {
+      return null;
+    }
+
     return this.crudModel.findByIdAndRemove(id).exec();
   }
 
