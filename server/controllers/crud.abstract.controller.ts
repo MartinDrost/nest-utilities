@@ -9,7 +9,8 @@ import {
   Param,
   Post,
   Put,
-  Req
+  Req,
+  Patch
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Document } from "mongoose";
@@ -70,14 +71,26 @@ export abstract class CrudController<IModel extends Document> {
   }
 
   @Put()
-  async update(
+  async put(
     @Req() request: NURequest,
     @Body() model: IModel,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request["context"]);
 
-    const updated = await this.crudService.update(model as IModel, request);
+    const updated = await this.crudService.put(model as IModel, request);
+    return await this.crudService.populate(updated);
+  }
+
+  @Patch()
+  async patch(
+    @Req() request: NURequest,
+    @Body() model: IModel,
+    ...args: any[]
+  ): Promise<IModel> {
+    this.checkPermissions(this.permissions.update, request["context"]);
+
+    const updated = await this.crudService.patch(model as IModel, request);
     return await this.crudService.populate(updated);
   }
 

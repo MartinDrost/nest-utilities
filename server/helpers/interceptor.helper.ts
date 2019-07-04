@@ -1,21 +1,20 @@
-import { NestApplication } from "@nestjs/core";
+import { INestApplication } from "@nestjs/common";
 import {
   ContextInterceptor,
-  FilterInterceptor,
-  SearchInterceptor,
-  PickInterceptor,
-  SortInterceptor,
-  PaginationInterceptor,
   CsvInterceptor,
-  ExceptionInterceptor
+  ExceptionInterceptor,
+  FilterInterceptor,
+  PaginationInterceptor,
+  PickInterceptor,
+  SearchInterceptor,
+  SortInterceptor
 } from "../interceptors";
-import { INestApplication } from "@nestjs/common";
 
 /**
  * Enable all available interceptors
  * @param app
  */
-export const useAllInterceptors = (app: INestApplication) => {
+export const useAllInterceptors = (app: INestApplication | any) => {
   app.useGlobalInterceptors(new ExceptionInterceptor());
   app.useGlobalInterceptors(new CsvInterceptor());
   app.useGlobalInterceptors(new PaginationInterceptor());

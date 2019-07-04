@@ -18,7 +18,7 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * Create a modelItem if it does't exist, update it otherwise
+   * Create a modelItem if it doesn't exist, update it otherwise
    * @param modelItem
    */
   public async createOrUpdate(
@@ -28,7 +28,7 @@ export abstract class CrudService<IModel extends Document> {
     if (modelItem._id) {
       const existing = await this.get(modelItem._id);
       if (existing !== null) {
-        return this.update(modelItem);
+        return this.patch(modelItem);
       }
     }
     return this.create(modelItem);
@@ -68,10 +68,10 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * Update an existing modelItem
+   * Merge with an existing modelItem
    * @param modelItem
    */
-  public async update(modelItem: IModel, ...args: any[]): Promise<IModel> {
+  public async patch(modelItem: IModel, ...args: any[]): Promise<IModel> {
     const existing = await this.get(modelItem._id);
     if (existing === null) {
       throw new Error("No model item found with the given id");
@@ -80,6 +80,15 @@ export abstract class CrudService<IModel extends Document> {
     return _.mergeWith(existing, modelItem, (obj, src) =>
       !_.isNil(src) ? src : obj
     ).save();
+  }
+
+  /**
+   * Overwrite the model item with the corresponding id
+   * @param modelItem
+   * @param args
+   */
+  public async put(modelItem: IModel, ...args: any): Promise<IModel> {
+    return this.crudModel.update({ _id: modelItem._id }, modelItem).exec();
   }
 
   /**
@@ -99,7 +108,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param id
    */
   public hide(_id: string, ...args: any[]): Promise<IModel | null> {
-    return this.update({ _id, isRemoved: true, removedAt: new Date() } as any);
+    return this.patch({ _id, isRemoved: true, removedAt: new Date() } as any);
   }
 
   /**
@@ -114,6 +123,7 @@ export abstract class CrudService<IModel extends Document> {
     for (let i = 0, l = modelItems.length; i < l; i++) {
       promises[i] = this.populate(modelItems[i]);
     }
+
     return Promise.all(promises);
   }
 
@@ -136,7 +146,7 @@ export abstract class CrudService<IModel extends Document> {
       return modelItem;
     }
 
-    // create deeppopulated options
+    // create deep populated options
     const options: ModelPopulateOptions[] = [];
     for (const path of paths) {
       this.addOptions(path, options, match);
