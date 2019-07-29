@@ -64,6 +64,30 @@ export class UserService extends CrudService<IUserModel> {
 }
 ```
 
+### Manipulate data before it is saved
+
+In some cases when implementing business logic, you want to manipulate the data of a model before it is saved. Instead of overriding each method of the CrudService that saves a model (`create()`, `createOrUpdate()`, `put()`, `patch()`), you can just override the `preSave()` method which is triggered just before the model is sent to Mongoose. This means that the Mongoose preSave hook is triggered after this method.
+
+```js
+@Injectable()
+export class UserService extends CrudService<IUserModel> {
+  constructor(
+    @InjectModel("User") private readonly userModel: Model<IUserModel>
+  ) {
+    super(userModel);
+  }
+
+  public preSave(user: IUserModel): Promise<IUserModel> {
+    // remove a users' password if he/she has no role
+    if(user.role === null) {
+      delete user.password
+    }
+
+    return user;
+  }
+}
+```
+
 ## CrudController
 
 The CrudController is an abstract class which you can use to extend your model controllers. When a controller extends this class it has to provide the CrudController the (Crud)service of the model you want the service to alter and optionally the guards which have to be applied on certain actions. Just like the CrudService, you are able to override the methods of the CrudController in order to implement additional functionalities to existing endpoints.
@@ -115,14 +139,15 @@ export class RolesGuard implements CanActivate {
 
 Implementing the CrudController opens up the following endpoints for the controller:
 
-|                | Method | URL        |
-| -------------- | ------ | ---------- |
-| Create         | POST   | /          |
-| Get by id      | GET    | /:id       |
-| Get many by id | GET    | /many/:ids |
-| Get all        | GET    | /          |
-| Update         | PUT    | /          |
-| Delete         | DELETE | /:id       |
+|                 | Method | URL        |
+| --------------- | ------ | ---------- |
+| Create          | POST   | /          |
+| Get by id       | GET    | /:id       |
+| Get many by id  | GET    | /many/:ids |
+| Get all         | GET    | /          |
+| Overwrite model | PUT    | /          |
+| Merge model     | PATCH  | /          |
+| Delete          | DELETE | /:id       |
 
 ## Interceptors
 

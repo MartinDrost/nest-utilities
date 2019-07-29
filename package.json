@@ -1,6 +1,6 @@
 {
   "name": "nest-utilities",
-  "version": "6.4.1",
+  "version": "6.4.2",
   "description": "",
   "main": "index.js",
   "keywords": [
@@ -26,7 +26,7 @@
   "dependencies": {
     "@nestjs/common": "6.3.0",
     "@nestjs/core": "6.3.0",
-    "lodash": "4.17.11",
+    "lodash": "^4.17.15",
     "lodash-es": "4.17.10",
     "mongoose": "5.5.0",
     "reflect-metadata": "0.1.13",

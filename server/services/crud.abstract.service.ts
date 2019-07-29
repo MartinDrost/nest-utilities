@@ -9,11 +9,12 @@ export abstract class CrudService<IModel extends Document> {
    * Save a new modelItem
    * @param modelItem
    */
-  public create(modelItem: IModel, ...args: any[]): Promise<IModel> {
+  public async create(modelItem: IModel, ...args: any[]): Promise<IModel> {
     // make sure no leftover id exists
     delete modelItem._id;
     delete modelItem.id;
 
+    modelItem = await this.preSave(modelItem);
     return new this.crudModel(modelItem).save();
   }
 
@@ -31,6 +32,7 @@ export abstract class CrudService<IModel extends Document> {
         return this.patch(modelItem);
       }
     }
+
     return this.create(modelItem);
   }
 
@@ -77,6 +79,7 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
+    modelItem = await this.preSave(modelItem);
     return _.mergeWith(existing, modelItem, (obj, src) =>
       !_.isNil(src) ? src : obj
     ).save();
@@ -88,6 +91,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param args
    */
   public async put(modelItem: IModel, ...args: any): Promise<IModel> {
+    modelItem = await this.preSave(modelItem);
     return this.crudModel.update({ _id: modelItem._id }, modelItem).exec();
   }
 
@@ -125,6 +129,18 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     return Promise.all(promises);
+  }
+
+  /**
+   * Method which is called before create, patch or put is saved.
+   * Override this method to use it.
+   *
+   * Be aware that the provided model can be incomplete because of patch requests.
+   *
+   * @param model
+   */
+  public async preSave(model: IModel): Promise<IModel> {
+    return model;
   }
 
   /**
