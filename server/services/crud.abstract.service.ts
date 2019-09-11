@@ -58,6 +58,14 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * Find models by basic attribute selectors
+   * @param options
+   */
+  public find(options: Partial<IModel>): Promise<IModel[]> {
+    return this.crudModel.find(options).exec();
+  }
+
+  /**
    * Get a modelItem by its id
    * @param id
    */
