@@ -87,7 +87,7 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
-    modelItem = JSON.parse(JSON.stringify(await this.preSave(modelItem)));
+    modelItem = await this.preSave(modelItem);
 
     // remove version number
     delete modelItem.__v;
@@ -103,7 +103,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param args
    */
   public async put(modelItem: IModel, ...args: any): Promise<IModel> {
-    modelItem = JSON.parse(JSON.stringify(await this.preSave(modelItem)));
+    modelItem = await this.preSave(modelItem);
 
     // remove version number
     delete modelItem.__v;
