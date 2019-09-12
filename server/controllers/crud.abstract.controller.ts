@@ -7,10 +7,10 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
-  Req,
-  Patch
+  Req
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Document } from "mongoose";
@@ -104,6 +104,17 @@ export abstract class CrudController<IModel extends Document> {
 
     const deleted = await this.crudService.delete(params.id, request);
     return await this.crudService.populate(deleted as IModel);
+  }
+
+  @Get(":key/:value")
+  find(
+    @Req() request: NURequest,
+    @Param("key") key: string,
+    @Param("value") value: string
+  ) {
+    this.checkPermissions(this.permissions.read, request["context"]);
+
+    return this.crudService.find({ [key]: value } as any);
   }
 
   /**

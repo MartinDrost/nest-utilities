@@ -139,15 +139,16 @@ export class RolesGuard implements CanActivate {
 
 Implementing the CrudController opens up the following endpoints for the controller:
 
-|                 | Method | URL        |
-| --------------- | ------ | ---------- |
-| Create          | POST   | /          |
-| Get by id       | GET    | /:id       |
-| Get many by id  | GET    | /many/:ids |
-| Get all         | GET    | /          |
-| Overwrite model | PUT    | /          |
-| Merge model     | PATCH  | /          |
-| Delete          | DELETE | /:id       |
+|                 | Method | URL          |
+| --------------- | ------ | ------------ |
+| Create          | POST   | /            |
+| Get by id       | GET    | /:id         |
+| Get many by id  | GET    | /many/:ids   |
+| Get all         | GET    | /            |
+| Find            | GET    | /:key/:value |
+| Overwrite model | PUT    | /            |
+| Merge model     | PATCH  | /            |
+| Delete          | DELETE | /:id         |
 
 ## Interceptors
 
