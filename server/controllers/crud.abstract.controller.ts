@@ -110,11 +110,19 @@ export abstract class CrudController<IModel extends Document> {
   find(
     @Req() request: NURequest,
     @Param("key") key: string,
-    @Param("value") value: string
+    @Param("value") value: any
   ) {
     this.checkPermissions(this.permissions.read, request["context"]);
 
-    return this.crudService.find({ [key]: value } as any);
+    // add support for integer searching
+    let query: any = { [key]: value };
+    if (!isNaN(value)) {
+      query = {
+        $or: [{ [key]: value }, { [key]: +value }]
+      };
+    }
+
+    return this.crudService.find(query);
   }
 
   /**

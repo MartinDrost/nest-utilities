@@ -124,6 +124,18 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * Find models and delete them
+   * @param options
+   */
+  public async findAndDelete(
+    options: Partial<IModel>
+  ): Promise<(IModel | null)[]> {
+    const found = await this.find(options);
+
+    return await Promise.all(found.map(model => this.delete(model._id)!));
+  }
+
+  /**
    * Hide a modelItem containing the given id
    * @param id
    */
