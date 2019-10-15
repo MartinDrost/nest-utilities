@@ -27,20 +27,16 @@
     "@nestjs/common": "6.3.0",
     "@nestjs/core": "6.3.0",
     "lodash": "^4.17.15",
-    "lodash-es": "4.17.14",
-    "mongoose": "5.5.0",
+    "mongoose": "5.7.3",
     "reflect-metadata": "0.1.13",
     "rxjs": "6.4.0",
-    "typescript": "3.4.2",
-    "xlsx": "0.14.2"
+    "typescript": "3.4.2"
   },
   "devDependencies": {
     "@types/express": "^4.0.39",
     "@types/lodash": "^4.14.109",
-    "@types/lodash-es": "^4.17.0",
-    "@types/mongoose": "^5.3.25",
+    "@types/mongoose": "^5.5.20",
     "@types/node": "^9.3.0",
-    "@types/xlsx": "0.0.36",
     "ts-loader": "^4.1.0",
     "ts-node": "^4.1.0",
     "tsconfig-paths": "^3.1.1",
