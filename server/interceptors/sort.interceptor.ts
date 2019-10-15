@@ -1,8 +1,8 @@
 import {
+  CallHandler,
   ExecutionContext,
   Injectable,
-  NestInterceptor,
-  CallHandler
+  NestInterceptor
 } from "@nestjs/common";
 import _get from "lodash/get";
 import { map } from "rxjs/operators";
@@ -31,12 +31,17 @@ export class SortInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map(value => {
         if (Array.isArray(value)) {
-          const sortFields = sort.split(",");
+          const sortFields: string[] = sort.split(",");
           value = value.sort((a, b) => {
             // iterate all fields on which should be sorted
             for (let field of sortFields) {
-              const desc = field.indexOf("-") === -1 ? 1 : -1;
-              field = field.replace("-", "");
+              // determine whether to sort asc/desc and cleanse the field
+              const startWithHyphen = field.startsWith("-");
+              const desc = startWithHyphen ? -1 : 1;
+              if (startWithHyphen) {
+                field = field.replace("-", "");
+              }
+
               let valueA = _get(a, field, -Infinity);
               let valueB = _get(b, field, -Infinity);
 
