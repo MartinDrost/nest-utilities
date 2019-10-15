@@ -1,8 +1,10 @@
-import _ from "lodash";
+import _mergeWith from "lodash/mergeWith";
+import _isNil from "lodash/isNil";
 import { ObjectID } from "mongodb";
-import { Document, Model, ModelPopulateOptions, mongo } from "mongoose";
+import { Document, Model } from "mongoose";
 import { IMongoRequest } from "../interfaces/mongoRequest.interface";
-import { request } from "http";
+import { Request } from "express";
+import { IMongoConditions } from "../interfaces";
 
 export abstract class CrudService<IModel extends Document> {
   // the model fields that need to be populated
@@ -54,22 +56,25 @@ export abstract class CrudService<IModel extends Document> {
       return null;
     }
 
-    return this.crudModel
-      .findOne(
-        { ...mongoRequest.conditions, _id: id },
-        mongoRequest.projection,
-        mongoRequest.options
-      )
-      .exec();
+    mongoRequest.conditions = { ...mongoRequest.conditions, _id: id };
+    mongoRequest.options = { limit: 1 };
+
+    return (await this.find(mongoRequest)[0]) || null;
   }
 
   /**
-   * Find models by basic attribute selectors
+   * Find models
    * @param options
    */
   public async find(mongoRequest: IMongoRequest = {}): Promise<IModel[]> {
-    // store the amount of documents without limit in a response header
     if (mongoRequest.request) {
+      // append conditions based on authorization
+      mongoRequest.conditions = {
+        ...mongoRequest.conditions,
+        ...(await this.getAuthorizationConditions(mongoRequest.request))
+      };
+
+      // store the amount of documents without limit in a response header
       const response = mongoRequest.request.context
         .switchToHttp()
         .getResponse();
@@ -91,7 +96,7 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * Get a modelItem by its id
+   * Get multiple modelItems by their id
    * @param id
    */
   public getMany(
@@ -126,8 +131,8 @@ export abstract class CrudService<IModel extends Document> {
     // remove version number
     delete modelItem.__v;
 
-    return _.mergeWith(existing, modelItem, (obj, src) =>
-      !_.isNil(src) ? src : obj
+    return _mergeWith(existing, modelItem, (obj, src) =>
+      !_isNil(src) ? src : obj
     ).save();
   }
 
@@ -179,5 +184,20 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async preSave(model: Partial<IModel>): Promise<Partial<IModel>> {
     return model;
+  }
+
+  /**
+   * Method which is called before the find method.
+   * Override this method to use it.
+   *
+   * The overridden method should return mongoose conditions which
+   * limits the user to content he/she is able to see.
+   *
+   * @param request
+   */
+  protected async getAuthorizationConditions(
+    request: Request
+  ): Promise<IMongoConditions> {
+    return {};
   }
 }
