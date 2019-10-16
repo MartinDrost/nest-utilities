@@ -1,11 +1,12 @@
 {
   "name": "nest-utilities",
-  "version": "6.4.9",
+  "version": "7.0.0",
   "description": "This package is meant as a helper layer for your Nest application. The package offers classes to create consistency in your code and to prevent repeating menial tasks and repetitive coding like writing CRUD functionalities.",
   "main": "distribution/index.js",
   "scripts": {
-    "prepublishOnly": "tsc --declaration",
-    "test": "tsc"
+    "prepublishOnly": "npm run build",
+    "test": "npm run build",
+    "build": "tsc"
   },
   "dependencies": {
     "@nestjs/common": "6.3.0",

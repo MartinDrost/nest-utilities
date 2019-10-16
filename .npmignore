@@ -1,6 +1,2 @@
-.gitignore
-/node_modules
-*.json
-*.md
-*.ts
-!*.d.ts
+source
+node_modules

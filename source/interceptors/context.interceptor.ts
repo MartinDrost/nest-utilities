@@ -1,9 +1,5 @@
-import {
-  ExecutionContext,
-  Injectable,
-  NestInterceptor,
-  CallHandler
-} from "@nestjs/common";
+import { ExecutionContext, Injectable } from "@nestjs/common";
+import { NestInterceptor, CallHandler } from "@nestjs/common";
 
 @Injectable()
 export class ContextInterceptor implements NestInterceptor {

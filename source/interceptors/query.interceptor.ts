@@ -5,7 +5,6 @@ import {
   CallHandler
 } from "@nestjs/common";
 import _get from "lodash/get";
-import { map } from "rxjs/operators";
 import { IHttpOptions } from "../interfaces";
 import { FilterInterceptor } from "./filter.interceptor";
 import { PaginationInterceptor } from "./pagination.interceptor";
