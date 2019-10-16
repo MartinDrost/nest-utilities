@@ -3,13 +3,10 @@ import _isNil from "lodash/isNil";
 import { ObjectID } from "mongodb";
 import { Document, Model } from "mongoose";
 import { IMongoRequest } from "../interfaces/mongoRequest.interface";
-import { Request } from "express";
+import { Request, Response } from "express";
 import { IMongoConditions } from "../interfaces";
 
 export abstract class CrudService<IModel extends Document> {
-  // the model fields that need to be populated
-  protected populateFields: string[] = [];
-
   constructor(public crudModel: Model<IModel>) {}
 
   /**
@@ -74,16 +71,18 @@ export abstract class CrudService<IModel extends Document> {
         ...(await this.getAuthorizationConditions(mongoRequest.request))
       };
 
-      // store the amount of documents without limit in a response header
-      const response = mongoRequest.request.context
-        .switchToHttp()
-        .getResponse();
+      if (mongoRequest.request.context) {
+        // store the amount of documents without limit in a response header
+        const response = mongoRequest.request.context
+          .switchToHttp()
+          .getResponse<Response>();
 
-      const numberOfDocuments = await this.crudModel
-        .countDocuments(mongoRequest.conditions)
-        .exec();
+        const numberOfDocuments = await this.crudModel
+          .countDocuments(mongoRequest.conditions)
+          .exec();
 
-      response.header("X-total-count", numberOfDocuments);
+        response.header("X-total-count", numberOfDocuments.toString());
+      }
     }
 
     return this.crudModel
@@ -191,7 +190,7 @@ export abstract class CrudService<IModel extends Document> {
    * Override this method to use it.
    *
    * The overridden method should return mongoose conditions which
-   * limits the user to content he/she is able to see.
+   * limits the requesting user to content he/she is able to see.
    *
    * @param request
    */

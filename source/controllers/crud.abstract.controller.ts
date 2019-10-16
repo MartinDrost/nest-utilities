@@ -37,7 +37,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.create, request.context);
 
-    return this.crudService.create(model as IModel, request);
+    return this.crudService.create(model);
   }
 
   @Get()
@@ -57,16 +57,17 @@ export abstract class CrudController<IModel extends Document> {
   @Get(":id")
   async get(
     @Req() request: INURequest,
-    @Param() params: any,
+    @Param("id") id: string,
     @Query() query: IHttpOptions,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    const model = await this.crudService.get(params.id, {
+    const model = await this.crudService.get(id, {
       request,
       ...this.toMongooseParams(query)
     });
+
     if (model === null) {
       throw new NotFoundException("No model with that id found");
     }
@@ -77,13 +78,13 @@ export abstract class CrudController<IModel extends Document> {
   @Get("many/:ids")
   getMany(
     @Req() request: INURequest,
-    @Param() params: any,
+    @Param("ids") ids: string,
     @Query() query: IHttpOptions,
     ...args: any[]
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    return this.crudService.getMany(params.ids.split(","), {
+    return this.crudService.getMany(ids.split(","), {
       request,
       ...this.toMongooseParams(query)
     });
@@ -114,12 +115,12 @@ export abstract class CrudController<IModel extends Document> {
   @Delete(":id")
   delete(
     @Req() request: INURequest,
-    @Param() params: any,
+    @Param("id") id: string,
     ...args: any[]
   ): Promise<IModel | null> {
     this.checkPermissions(this.permissions.delete, request.context);
 
-    return this.crudService.delete(params.id, request);
+    return this.crudService.delete(id);
   }
 
   /**
