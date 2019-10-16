@@ -6,22 +6,22 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  NotFoundException,
   Param,
   Patch,
   Post,
   Put,
-  Req,
   Query,
-  NotFoundException
+  Req
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Document } from "mongoose";
-import { ICrudPermission, INURequest, IHttpOptions } from "../interfaces";
+import { ICrudPermission, IHttpOptions, INURequest } from "../interfaces";
 import { ICrudPermissions } from "../interfaces/crudPermissions.interface";
-import { CrudService } from "../services/crud.abstract.service";
 import { IMongoConditions } from "../interfaces/mongoConditions.interface";
-import { IMongoProjection } from "../interfaces/mongoProjection.interface";
 import { IMongoOptions } from "../interfaces/mongoOptions.interface";
+import { IMongoProjection } from "../interfaces/mongoProjection.interface";
+import { CrudService } from "../services/crud.abstract.service";
 
 export abstract class CrudController<IModel extends Document> {
   constructor(
@@ -37,7 +37,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.create, request.context);
 
-    return this.crudService.create(model);
+    return this.crudService.create(model, request);
   }
 
   @Get()
@@ -98,7 +98,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request.context);
 
-    return this.crudService.put(model as IModel, request);
+    return this.crudService.put(model, request);
   }
 
   @Patch()
@@ -109,7 +109,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request.context);
 
-    return this.crudService.patch(model as IModel, request);
+    return this.crudService.patch(model, request);
   }
 
   @Delete(":id")
@@ -120,7 +120,7 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel | null> {
     this.checkPermissions(this.permissions.delete, request.context);
 
-    return this.crudService.delete(id);
+    return this.crudService.delete(id, request);
   }
 
   /**
@@ -163,7 +163,8 @@ export abstract class CrudController<IModel extends Document> {
     return {
       conditions: this.queryToConditions(query),
       projection: this.queryToProjection(query),
-      options: this.queryToOptions(query)
+      options: this.queryToOptions(query),
+      populate: this.queryToPopulate(query)
     };
   }
 
@@ -179,7 +180,7 @@ export abstract class CrudController<IModel extends Document> {
       // get either the search scope or every key of the schema
       const scope = query.searchScope
         ? query.searchScope.split(",")
-        : Object.keys(this.crudService.crudModel.schema.obj);
+        : Object.keys(this.crudService.getSchema());
 
       scope.forEach(key => {
         conditions[key] = { $regex: query.search, $options: "i" };
@@ -198,7 +199,11 @@ export abstract class CrudController<IModel extends Document> {
    * Converts http query params to Mongoose projections
    * @param query
    */
-  private queryToProjection(query: IHttpOptions): IMongoProjection {
+  private queryToProjection(query: IHttpOptions): IMongoProjection | undefined {
+    if (!query.pick) {
+      return undefined;
+    }
+
     const projection = {};
     const picks = (query.pick || "").split(",");
 
@@ -216,21 +221,10 @@ export abstract class CrudController<IModel extends Document> {
    */
   private queryToOptions(query: IHttpOptions): IMongoOptions {
     const options: IMongoOptions = {
-      populate: [],
       sort: [],
       limit: query.limit ? +query.limit : undefined,
       skip: query.offset ? +query.offset : undefined
     };
-
-    // create populate options
-    if (query.populate !== undefined) {
-      const virtuals = (this.crudService.crudModel.schema as any).virtuals;
-
-      // get either the provided keys or every ref from the schema
-      options.populate = query.populate
-        ? query.populate.split(",")
-        : Object.keys(virtuals).filter(key => virtuals[key].options.ref);
-    }
 
     // create sort options
     if (query.sort !== undefined) {
@@ -238,5 +232,18 @@ export abstract class CrudController<IModel extends Document> {
     }
 
     return options;
+  }
+
+  /**
+   * Converts http query params to populatable params
+   * @param query
+   */
+  private queryToPopulate(query: IHttpOptions): string[] {
+    if (query.populate === undefined) {
+      return [];
+    }
+    return query.populate
+      ? query.populate.split(",")
+      : this.crudService.getReferenceVirtuals();
   }
 }

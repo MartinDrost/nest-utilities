@@ -1,13 +1,13 @@
-import _mergeWith from "lodash/mergeWith";
-import _isNil from "lodash/isNil";
-import { ObjectID } from "mongodb";
-import { Document, Model } from "mongoose";
-import { IMongoRequest } from "../interfaces/mongoRequest.interface";
 import { Request, Response } from "express";
+import _isNil from "lodash/isNil";
+import _mergeWith from "lodash/mergeWith";
+import { ObjectID } from "mongodb";
+import { Document, Model, ModelPopulateOptions } from "mongoose";
 import { IMongoConditions } from "../interfaces";
+import { IMongoRequest } from "../interfaces/mongoRequest.interface";
 
 export abstract class CrudService<IModel extends Document> {
-  constructor(public crudModel: Model<IModel>) {}
+  constructor(protected crudModel: Model<IModel>) {}
 
   /**
    * Save a new modelItem
@@ -51,9 +51,25 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     mongoRequest.conditions = { ...mongoRequest.conditions, _id: id };
-    mongoRequest.options = { limit: 1 };
 
-    return (await this.find(mongoRequest)[0]) || null;
+    return this.findOne(mongoRequest);
+  }
+
+  /**
+   * Find a single model
+   * @param mongoRequest
+   */
+  public async findOne(
+    mongoRequest: IMongoRequest = {}
+  ): Promise<IModel | null> {
+    mongoRequest.options = { ...mongoRequest.options, limit: 1 };
+
+    const response = await this.find(mongoRequest);
+    if (response.length) {
+      return response[0];
+    }
+
+    return null;
   }
 
   /**
@@ -82,12 +98,15 @@ export abstract class CrudService<IModel extends Document> {
       }
     }
 
+    // build population params
+    const populateOptions = this.getPopulateParams(mongoRequest.populate || []);
+
     return this.crudModel
-      .find(
-        mongoRequest.conditions,
-        mongoRequest.projection,
-        mongoRequest.options
-      )
+      .find(mongoRequest.conditions, mongoRequest.projection, {
+        ...mongoRequest.options,
+        populate: undefined
+      })
+      .populate(populateOptions)
       .exec();
   }
 
@@ -100,13 +119,8 @@ export abstract class CrudService<IModel extends Document> {
     mongoRequest: IMongoRequest = {},
     ...args: any[]
   ): Promise<IModel[]> {
-    return this.crudModel
-      .find(
-        { ...mongoRequest.conditions, _id: ids },
-        mongoRequest.projection,
-        mongoRequest.options
-      )
-      .exec();
+    mongoRequest.conditions = { ...mongoRequest.conditions, _id: ids };
+    return this.find(mongoRequest);
   }
 
   /**
@@ -171,6 +185,50 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * Returns an array with all referencing virtuals of the services' model
+   */
+  public getReferenceVirtuals(): string[] {
+    const virtuals = (this.crudModel.schema as any).virtuals;
+
+    return Object.keys(virtuals).filter(key => !!virtuals[key].options.ref);
+  }
+
+  /**
+   * Returns the schema object of the services' model
+   */
+  public getSchema(): any {
+    return this.crudModel.schema.obj;
+  }
+
+  /**
+   * Populate a retrieved model
+   * @param model
+   */
+  public async populate(model: IModel, paths: string[] = []): Promise<IModel> {
+    if (!model.populate) {
+      if (!model._id && !model.id) {
+        return model;
+      } else {
+        return (await this.get(model._id || model._id, {
+          populate: []
+        }))!;
+      }
+    }
+
+    // use given paths or the defaul referencing virtuals to populate
+    paths = paths.length ? paths : this.getReferenceVirtuals();
+    return model.populate(this.getPopulateParams(paths)).execPopulate();
+  }
+
+  /**
+   * Populate a list of retrieved models
+   * @param models
+   */
+  public populateList(models: IModel[]): Promise<IModel[]> {
+    return Promise.all(models.map(model => this.populate(model)));
+  }
+
+  /**
    * Method which is called before create, patch or put is saved.
    * Override this method to use it.
    *
@@ -180,6 +238,46 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async preSave(model: Partial<IModel>): Promise<Partial<IModel>> {
     return model;
+  }
+
+  private getPopulateParams(paths: string[]): ModelPopulateOptions[] {
+    const params = [];
+    paths.forEach(path => this.addOptions(path, params));
+
+    return params;
+  }
+
+  /**
+   * create populate options based on paths
+   * @param path
+   * @param layer
+   * @param match
+   */
+  private addOptions(path: string, layer: ModelPopulateOptions[]): void {
+    // break the cycle if the path has ended
+    if (!path) {
+      return;
+    }
+
+    // separate the path in the current position and the journey ahead
+    const dismembered = path.split(".");
+    const position = dismembered.shift() as string;
+    const journey = dismembered.join(".");
+
+    // check if the current position has already been mapped
+    for (let i = 0; i < layer.length; i++) {
+      if (layer[i].path === position) {
+        this.addOptions(journey, layer[i].populate as any);
+        return;
+      }
+    }
+
+    // add the position otherwise
+    layer.unshift({
+      path: position,
+      populate: []
+    });
+    this.addOptions(journey, layer[0].populate as any);
   }
 
   /**
