@@ -20,7 +20,6 @@ import { ICrudPermission, IHttpOptions, INURequest } from "../interfaces";
 import { ICrudPermissions } from "../interfaces/crudPermissions.interface";
 import { IMongoConditions } from "../interfaces/mongoConditions.interface";
 import { IMongoOptions } from "../interfaces/mongoOptions.interface";
-import { IMongoProjection } from "../interfaces/mongoProjection.interface";
 import { CrudService } from "../services/crud.abstract.service";
 
 export abstract class CrudController<IModel extends Document> {
@@ -162,7 +161,6 @@ export abstract class CrudController<IModel extends Document> {
   protected toMongooseParams(query: IHttpOptions) {
     return {
       conditions: this.queryToConditions(query),
-      projection: this.queryToProjection(query),
       options: this.queryToOptions(query),
       populate: this.queryToPopulate(query)
     };
@@ -196,26 +194,6 @@ export abstract class CrudController<IModel extends Document> {
   }
 
   /**
-   * Converts http query params to Mongoose projections
-   * @param query
-   */
-  private queryToProjection(query: IHttpOptions): IMongoProjection | undefined {
-    if (!query.pick) {
-      return undefined;
-    }
-
-    const projection = {};
-    const picks = (query.pick || "").split(",");
-
-    // equal the projection to each picked attribute
-    picks.forEach(pick => {
-      projection[pick] = 1;
-    });
-
-    return projection;
-  }
-
-  /**
    * Converts http query params to Mongoose options
    * @param query
    */
@@ -223,12 +201,17 @@ export abstract class CrudController<IModel extends Document> {
     const options: IMongoOptions = {
       sort: [],
       limit: query.limit ? +query.limit : undefined,
-      skip: query.offset ? +query.offset : undefined
+      skip: query.offset ? +query.offset : undefined,
+      select: []
     };
 
     // create sort options
     if (query.sort !== undefined) {
       options.sort = query.sort.split(",");
+    }
+
+    if (query.pick !== undefined) {
+      options.select = query.pick.split(",");
     }
 
     return options;

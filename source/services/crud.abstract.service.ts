@@ -99,12 +99,19 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     // build population params
-    const populateOptions = this.getPopulateParams(mongoRequest.populate || []);
+    const selection = (mongoRequest.options || { select: [] }).select || [];
+    const populateOptions = this.getPopulateParams(
+      mongoRequest.populate || [],
+      selection
+    );
 
     return this.crudModel
-      .find(mongoRequest.conditions, mongoRequest.projection, {
+      .find(mongoRequest.conditions, null, {
         ...mongoRequest.options,
-        populate: undefined
+        populate: undefined,
+
+        // join the selection and filter out deep selections
+        select: selection.filter(field => !field.includes(".")).join(" ")
       })
       .populate(populateOptions)
       .exec();
@@ -204,7 +211,11 @@ export abstract class CrudService<IModel extends Document> {
    * Populate a retrieved model
    * @param model
    */
-  public async populate(model: IModel, paths: string[] = []): Promise<IModel> {
+  public async populate(
+    model: IModel,
+    paths: string[] = [],
+    picks: string[] = []
+  ): Promise<IModel> {
     if (!model.populate) {
       if (!model._id && !model.id) {
         return model;
@@ -217,7 +228,7 @@ export abstract class CrudService<IModel extends Document> {
 
     // use given paths or the defaul referencing virtuals to populate
     paths = paths.length ? paths : this.getReferenceVirtuals();
-    return model.populate(this.getPopulateParams(paths)).execPopulate();
+    return model.populate(this.getPopulateParams(paths, picks)).execPopulate();
   }
 
   /**
@@ -240,44 +251,60 @@ export abstract class CrudService<IModel extends Document> {
     return model;
   }
 
-  private getPopulateParams(paths: string[]): ModelPopulateOptions[] {
-    const params = [];
-    paths.forEach(path => this.addOptions(path, params));
-
-    return params;
+  private getPopulateParams(
+    paths: string[],
+    picks: string[] = []
+  ): ModelPopulateOptions[] {
+    const res = paths
+      .map(path => this.deepPopulate(path, picks)!)
+      .filter(param => param !== undefined);
+    console.log(res);
+    return res;
   }
 
   /**
-   * create populate options based on paths
-   * @param path
-   * @param layer
-   * @param match
+   * Creates deep population options including select options
+   *
+   * @param path the current field including children
+   * @param picks all picks defined in the select options
+   * @param journey the passed fields so far
    */
-  private addOptions(path: string, layer: ModelPopulateOptions[]): void {
-    // break the cycle if the path has ended
+  private deepPopulate(
+    path: string,
+    picks: string[],
+    journey: string[] = []
+  ): ModelPopulateOptions | undefined {
     if (!path) {
-      return;
+      return undefined;
     }
 
-    // separate the path in the current position and the journey ahead
-    const dismembered = path.split(".");
-    const position = dismembered.shift() as string;
-    const journey = dismembered.join(".");
+    // get the current position and remove it from the journey
+    const pathParts = path.split(".");
+    const currentPosition = pathParts.shift()!;
 
-    // check if the current position has already been mapped
-    for (let i = 0; i < layer.length; i++) {
-      if (layer[i].path === position) {
-        this.addOptions(journey, layer[i].populate as any);
-        return;
-      }
-    }
+    // gather current pick selectors
+    const selection = picks
+      .map(pick => {
+        // popping results in the pickParts containing the current layer
+        const pickParts = pick.split(".");
+        const field = pickParts.pop();
 
-    // add the position otherwise
-    layer.unshift({
-      path: position,
-      populate: []
-    });
-    this.addOptions(journey, layer[0].populate as any);
+        if (pickParts.join(".") === [...journey, currentPosition].join(".")) {
+          return field;
+        }
+        return undefined;
+      })
+      .filter(item => !!item);
+
+    return {
+      path: currentPosition,
+      select: selection.join(" ") || undefined,
+      populate:
+        this.deepPopulate(pathParts.join("."), picks, [
+          ...journey,
+          currentPosition
+        ]) || []
+    };
   }
 
   /**
