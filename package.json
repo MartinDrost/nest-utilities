@@ -1,45 +1,38 @@
 {
   "name": "nest-utilities",
   "version": "6.4.9",
-  "description": "",
-  "main": "index.js",
-  "keywords": [
-    "nestjs",
-    "restful",
-    "interceptors",
-    "typescript"
-  ],
+  "description": "This package is meant as a helper layer for your Nest application. The package offers classes to create consistency in your code and to prevent repeating menial tasks and repetitive coding like writing CRUD functionalities.",
+  "main": "distribution/index.js",
   "scripts": {
     "prepublishOnly": "tsc --declaration",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MartinDrost/nest-utilities.git"
-  },
-  "author": "MartinDrost",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/MartinDrost/nest-utilities/issues"
-  },
-  "homepage": "https://github.com/MartinDrost/nest-utilities#readme",
   "dependencies": {
     "@nestjs/common": "6.3.0",
     "@nestjs/core": "6.3.0",
     "lodash": "^4.17.15",
     "mongoose": "5.7.3",
     "reflect-metadata": "0.1.13",
-    "rxjs": "6.4.0",
-    "typescript": "3.4.2"
+    "rxjs": "6.4.0"
   },
   "devDependencies": {
     "@types/express": "^4.0.39",
     "@types/lodash": "^4.14.109",
     "@types/mongoose": "^5.5.20",
     "@types/node": "^9.3.0",
-    "ts-loader": "^4.1.0",
-    "ts-node": "^4.1.0",
     "tsconfig-paths": "^3.1.1",
-    "tslint": "5.3.2"
-  }
+    "tslint": "5.3.2",
+    "typescript": "3.4.2"
+  },
+  "repository": "git+https://github.com/MartinDrost/nest-utilities.git",
+  "author": "MartinDrost",
+  "license": "ISC",
+  "bugs": "https://github.com/MartinDrost/nest-utilities/issues",
+  "homepage": "https://github.com/MartinDrost/nest-utilities#readme",
+  "keywords": [
+    "nestjs",
+    "restful",
+    "interceptors",
+    "typescript"
+  ]
 }
