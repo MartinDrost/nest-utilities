@@ -255,11 +255,9 @@ export abstract class CrudService<IModel extends Document> {
     paths: string[],
     picks: string[] = []
   ): ModelPopulateOptions[] {
-    const res = paths
+    return paths
       .map(path => this.deepPopulate(path, picks)!)
       .filter(param => param !== undefined);
-    console.log(res);
-    return res;
   }
 
   /**
