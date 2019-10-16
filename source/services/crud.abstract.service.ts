@@ -23,15 +23,12 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * Create a modelItem if it doesn't exist, update it otherwise
+   * Create a modelItem if it doesn't exist, overwrite it otherwise
    * @param modelItem
    */
-  public async createOrUpdate(
-    modelItem: IModel,
-    ...args: any[]
-  ): Promise<IModel> {
-    if (modelItem._id) {
-      const existing = await this.get(modelItem._id);
+  public async createOrPut(modelItem: IModel, ...args: any[]): Promise<IModel> {
+    if (modelItem._id || modelItem.id) {
+      const existing = await this.get(modelItem._id || modelItem.id);
       if (existing !== null) {
         return this.patch(modelItem);
       }
@@ -120,7 +117,7 @@ export abstract class CrudService<IModel extends Document> {
     modelItem: Partial<IModel>,
     ...args: any[]
   ): Promise<IModel> {
-    const existing = await this.get(modelItem._id || "");
+    const existing = await this.get(modelItem._id || modelItem.id || "");
     if (existing === null) {
       throw new Error("No model item found with the given id");
     }
@@ -146,7 +143,7 @@ export abstract class CrudService<IModel extends Document> {
     // remove version number
     delete model.__v;
 
-    return this.crudModel.update({ _id: model._id }, model).exec();
+    return this.crudModel.update({ _id: model._id || model.id }, model).exec();
   }
 
   /**
