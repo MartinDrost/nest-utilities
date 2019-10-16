@@ -7,7 +7,9 @@
     "strict": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "outDir": "distribution"
+    "outDir": "distribution",
+    "sourceMap": true,
+    "declarationMap": true
   },
   "include": ["source"],
   "exclude": ["node_modules"]
