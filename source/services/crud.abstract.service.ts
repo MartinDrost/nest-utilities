@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import _isNil from "lodash/isNil";
 import _mergeWith from "lodash/mergeWith";
-import { ObjectID } from "mongodb";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
 import { IMongoConditions } from "../interfaces";
 import { IMongoRequest } from "../interfaces/mongoRequest.interface";
+import { isObjectID } from "../utilities";
 
 export abstract class CrudService<IModel extends Document> {
   constructor(protected crudModel: Model<IModel>) {}
@@ -46,7 +46,7 @@ export abstract class CrudService<IModel extends Document> {
     mongoRequest: IMongoRequest = {},
     ...args: any[]
   ): Promise<IModel | null> {
-    if (ObjectID.isValid(id) === false) {
+    if (isObjectID(id) === false) {
       return null;
     }
 
@@ -175,7 +175,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param id
    */
   public async delete(id: string, ...args: any[]): Promise<IModel | null> {
-    if (ObjectID.isValid(id) === false) {
+    if (isObjectID(id) === false) {
       return null;
     }
 
