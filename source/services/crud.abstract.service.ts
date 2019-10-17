@@ -320,11 +320,11 @@ export abstract class CrudService<IModel extends Document> {
    *
    * Override this method to use it.
    *
-   * @param request the Express request from the controller
+   * @param request the Express request originating from the controller
    * @param conditions already set conditions to be extended upon
    */
   protected abstract async onFindRequest(
-    request: Request,
+    request: Request | any,
     conditions: IMongoConditions
   ): Promise<IMongoConditions>;
 }
