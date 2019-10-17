@@ -81,10 +81,10 @@ export abstract class CrudService<IModel extends Document> {
       // append conditions based on authorization
       mongoRequest.conditions = {
         ...mongoRequest.conditions,
-        ...(await this.onFindRequest(
-          mongoRequest.request,
-          mongoRequest.conditions || {}
-        ))
+        ...(await this.onFindRequest(mongoRequest.request, {
+          $and: [{}],
+          ...mongoRequest.conditions
+        }))
       };
 
       if (mongoRequest.request.context) {
