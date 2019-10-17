@@ -81,7 +81,10 @@ export abstract class CrudService<IModel extends Document> {
       // append conditions based on authorization
       mongoRequest.conditions = {
         ...mongoRequest.conditions,
-        ...(await this.onAuthorizationRequest(mongoRequest.request))
+        ...(await this.onFindRequest(
+          mongoRequest.request,
+          mongoRequest.conditions || {}
+        ))
       };
 
       if (mongoRequest.request.context) {
@@ -307,16 +310,21 @@ export abstract class CrudService<IModel extends Document> {
 
   /**
    * This method is called when the application requires Mongoose conditions
-   * which imits the requesting user to content he/she is able to see.
+   * which limits the requesting user to content he/she is able to see.
+   * When writing the authorization conditions you should take the conditions
+   * parameter into account since it originates from another point in the
+   * application. The object should therefore be extended instead of overwritten.
    *
    * The request originates from Express and ideally contains a user object
    * to decide the right conditions.
    *
    * Override this method to use it.
    *
-   * @param request
+   * @param request the Express request from the controller
+   * @param conditions already set conditions to be extended upon
    */
-  protected abstract async onAuthorizationRequest(
-    request: Request
+  protected abstract async onFindRequest(
+    request: Request,
+    conditions: IMongoConditions
   ): Promise<IMongoConditions>;
 }
