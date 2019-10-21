@@ -190,7 +190,6 @@ export abstract class CrudController<IModel extends Document> {
     Object.keys(query.filter || {}).forEach(key => {
       const value = query.filter![key];
 
-      // todo: make schematype fetching recursive
       if (schema[key] && schema[key].type === String) {
         $or.push({ [key]: { $regex: value, $options: "i" } });
       }

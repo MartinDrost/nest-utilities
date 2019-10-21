@@ -122,7 +122,10 @@ export abstract class CrudService<IModel extends Document> {
           .exec();
 
         response.header("X-total-count", numberOfDocuments.toString());
-        // todo: expose custom header
+        response.header("Access-Control-Expose-Headers", [
+          "X-total-count",
+          (response.getHeader("Access-Control-Expose-Headers") || "").toString()
+        ]);
       }
     }
 
