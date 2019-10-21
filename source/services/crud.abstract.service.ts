@@ -13,20 +13,26 @@ export abstract class CrudService<IModel extends Document> {
    * Save a new modelItem
    * @param modelItem
    */
-  public async create(modelItem: IModel, ...args: any[]): Promise<IModel> {
+  public async create(
+    modelItem: Omit<IModel, keyof Document>,
+    ...args: any[]
+  ): Promise<IModel> {
     // make sure no leftover id exists
-    delete modelItem._id;
-    delete modelItem.id;
+    delete modelItem["_id"];
+    delete modelItem["id"];
 
-    const model = await this.preSave(modelItem);
+    const model = await this.preSave(modelItem as IModel);
     return new this.crudModel(model).save();
   }
 
   /**
-   * Create a modelItem if it doesn't exist, overwrite it otherwise
+   * Create a modelItem if it doesn't exist, merge it otherwise
    * @param modelItem
    */
-  public async createOrPut(modelItem: IModel, ...args: any[]): Promise<IModel> {
+  public async createOrPatch(
+    modelItem: IModel,
+    ...args: any[]
+  ): Promise<IModel> {
     if (modelItem._id || modelItem.id) {
       const existing = await this.get(modelItem._id || modelItem.id);
       if (existing !== null) {
@@ -98,6 +104,7 @@ export abstract class CrudService<IModel extends Document> {
           .exec();
 
         response.header("X-total-count", numberOfDocuments.toString());
+        // todo: expose custom header
       }
     }
 
@@ -108,7 +115,9 @@ export abstract class CrudService<IModel extends Document> {
       selection
     );
 
-    return this.crudModel
+    // todo: disable cast errors
+
+    const response = await this.crudModel
       .find(mongoRequest.conditions, null, {
         ...mongoRequest.options,
         populate: undefined,
@@ -118,6 +127,10 @@ export abstract class CrudService<IModel extends Document> {
       })
       .populate(populateOptions)
       .exec();
+
+    // todo: enable cast errors
+
+    return response;
   }
 
   /**
@@ -243,17 +256,10 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * Method which is called before create, patch or put is saved.
-   * Override this method to use it.
-   *
-   * Be aware that the provided model can be incomplete because of patch requests.
-   *
-   * @param model
+   * Build and return recursive populate() params for Mongoose
+   * @param paths
+   * @param picks
    */
-  public async preSave(model: Partial<IModel>): Promise<Partial<IModel>> {
-    return model;
-  }
-
   private getPopulateParams(
     paths: string[],
     picks: string[] = []
@@ -297,6 +303,7 @@ export abstract class CrudService<IModel extends Document> {
       })
       .filter(item => !!item);
 
+    // todo: implement population authorization
     return {
       path: currentPosition,
       select: selection.join(" ") || undefined,
@@ -306,6 +313,18 @@ export abstract class CrudService<IModel extends Document> {
           currentPosition
         ]) || []
     };
+  }
+
+  /**
+   * Method which is called before create, patch or put is saved.
+   * Override this method to use it.
+   *
+   * Be aware that the provided model can be incomplete because of patch requests.
+   *
+   * @param model
+   */
+  public async preSave(model: Partial<IModel>): Promise<Partial<IModel>> {
+    return model;
   }
 
   /**
