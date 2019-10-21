@@ -7,7 +7,11 @@ import { IMongoRequest } from "../interfaces/mongoRequest.interface";
 import { isObjectID } from "../utilities";
 
 export abstract class CrudService<IModel extends Document> {
-  constructor(protected crudModel: Model<IModel>) {}
+  private static serviceMap: { [modelName: string]: CrudService<any> } = {};
+
+  constructor(protected crudModel: Model<IModel>) {
+    CrudService.serviceMap[crudModel.modelName] = this;
+  }
 
   /**
    * Save a new modelItem
@@ -131,9 +135,10 @@ export abstract class CrudService<IModel extends Document> {
 
     // build population params
     const selection = (mongoRequest.options || { select: [] }).select || [];
-    const populateOptions = this.getPopulateParams(
+    const populateOptions = await this.getPopulateParams(
       mongoRequest.populate || [],
-      selection
+      selection,
+      mongoRequest.request
     );
 
     // execute the find query
@@ -253,7 +258,8 @@ export abstract class CrudService<IModel extends Document> {
   public async populate(
     model: IModel,
     paths: string[] = [],
-    picks: string[] = []
+    picks: string[] = [],
+    request?: Request
   ): Promise<IModel> {
     if (!model.populate) {
       if (!model._id && !model.id) {
@@ -267,7 +273,9 @@ export abstract class CrudService<IModel extends Document> {
 
     // use given paths or the defaul referencing virtuals to populate
     paths = paths.length ? paths : this.getReferenceVirtuals();
-    return model.populate(this.getPopulateParams(paths, picks)).execPopulate();
+    return model
+      .populate(await this.getPopulateParams(paths, picks, request))
+      .execPopulate();
   }
 
   /**
@@ -283,13 +291,14 @@ export abstract class CrudService<IModel extends Document> {
    * @param paths
    * @param picks
    */
-  private getPopulateParams(
+  private async getPopulateParams(
     paths: string[],
-    picks: string[] = []
-  ): ModelPopulateOptions[] {
-    return paths
-      .map(path => this.deepPopulate(path, picks)!)
-      .filter(param => param !== undefined);
+    picks: string[] = [],
+    request?: Request
+  ): Promise<ModelPopulateOptions[]> {
+    return (await Promise.all(
+      paths.map(path => this.deepPopulate(path, picks, request))
+    )).filter(param => param !== undefined) as ModelPopulateOptions[];
   }
 
   /**
@@ -299,11 +308,12 @@ export abstract class CrudService<IModel extends Document> {
    * @param picks all picks defined in the select options
    * @param journey the passed fields so far
    */
-  private deepPopulate(
+  private async deepPopulate(
     path: string,
     picks: string[],
+    request?: Request,
     journey: string[] = []
-  ): ModelPopulateOptions | undefined {
+  ): Promise<ModelPopulateOptions | undefined> {
     if (!path) {
       return undefined;
     }
@@ -326,16 +336,31 @@ export abstract class CrudService<IModel extends Document> {
       })
       .filter(item => !!item);
 
-    // todo: implement population authorization
     return {
       path: currentPosition,
       select: selection.join(" ") || undefined,
+      match: this.getPopulateMatch(
+        [...journey, currentPosition].join("."),
+        request
+      ),
       populate:
-        this.deepPopulate(pathParts.join("."), picks, [
+        (await this.deepPopulate(pathParts.join("."), picks, request, [
           ...journey,
           currentPosition
-        ]) || []
+        ])) || []
     };
+  }
+
+  /**
+   * Retrieve the correct match condition based on the attribute path
+   * @param path
+   * @param request
+   */
+  private async getPopulateMatch(path: string, request?: Request) {
+    if (!request) {
+      return {};
+    }
+    return CrudService.serviceMap["abc"].onFindRequest(request, { $and: [] });
   }
 
   /**
@@ -365,7 +390,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param conditions already set conditions to be extended upon
    */
-  protected abstract async onFindRequest(
+  public abstract async onFindRequest(
     request: Request | any,
     conditions: IMongoConditions
   ): Promise<IMongoConditions>;
