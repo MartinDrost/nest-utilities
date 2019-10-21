@@ -306,6 +306,7 @@ export abstract class CrudService<IModel extends Document> {
    *
    * @param path the current field including children
    * @param picks all picks defined in the select options
+   * @param request the accompanying request
    * @param journey the passed fields so far
    */
   private async deepPopulate(
@@ -339,7 +340,7 @@ export abstract class CrudService<IModel extends Document> {
     return {
       path: currentPosition,
       select: selection.join(" ") || undefined,
-      match: this.getPopulateMatch(
+      match: await this.getPopulateConditions(
         [...journey, currentPosition].join("."),
         request
       ),
@@ -356,11 +357,37 @@ export abstract class CrudService<IModel extends Document> {
    * @param path
    * @param request
    */
-  private async getPopulateMatch(path: string, request?: Request) {
+  private async getPopulateConditions(
+    path: string,
+    request?: Request
+  ): Promise<IMongoConditions> {
+    // no request means no user to authorize
     if (!request) {
       return {};
     }
-    return CrudService.serviceMap["abc"].onFindRequest(request, { $and: [] });
+
+    // iterate through the path to find the correct service to populate
+    let service: CrudService<any> = this;
+    let haystack = {
+      ...service.crudModel.schema,
+      ...(service.crudModel.schema as any).virtuals
+    };
+    path.split(",").forEach(position => {
+      if (haystack[position]) {
+        haystack = haystack[position];
+
+        // switch services if we encounter a reference
+        if (haystack.ref) {
+          service = CrudService.serviceMap[haystack.ref];
+          haystack = {
+            ...service.crudModel.schema,
+            ...(service.crudModel.schema as any).virtuals
+          };
+        }
+      }
+    });
+
+    return service.onFindRequest(request, { $and: [] });
   }
 
   /**
