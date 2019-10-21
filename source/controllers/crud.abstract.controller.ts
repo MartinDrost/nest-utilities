@@ -171,26 +171,38 @@ export abstract class CrudController<IModel extends Document> {
    * @param query
    */
   private queryToConditions(query: IHttpOptions): IMongoConditions {
-    const conditions = {};
+    const $or: any[] = [];
 
-    // create search condition
+    // map search conditions to the filter since they behave the same
     if (query.search) {
-      // get either the search scope or every key of the schema
+      query.filter = query.filter || {};
       const scope = query.searchScope
         ? query.searchScope.split(",")
-        : Object.keys(this.crudService.getSchema());
+        : ["_id", ...Object.keys(this.crudService.getSchema())];
 
       scope.forEach(key => {
-        conditions[key] = { $regex: query.search, $options: "i" };
+        query.filter![key] = query.search || "";
       });
     }
 
     // create filter conditions
+    const schema = this.crudService.getSchema();
     Object.keys(query.filter || {}).forEach(key => {
-      conditions[key] = { $regex: query.filter![key], $options: "i" };
+      const value = query.filter![key];
+
+      // todo: make schematype fetching recursive
+      if (schema[key] && schema[key].type === String) {
+        $or.push({ [key]: { $regex: value, $options: "i" } });
+      }
+
+      if (!isNaN(+value)) {
+        $or.push({ [key]: +value });
+      }
+
+      $or.push({ [key]: value });
     });
 
-    return conditions;
+    return $or.length ? { $or } : {};
   }
 
   /**

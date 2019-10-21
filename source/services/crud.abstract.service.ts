@@ -83,6 +83,24 @@ export abstract class CrudService<IModel extends Document> {
    * @param options
    */
   public async find(mongoRequest: IMongoRequest = {}): Promise<IModel[]> {
+    //disable cast errors
+    const types = Object.keys(this.crudModel.base.SchemaTypes);
+    const validators: { [type: string]: Function } = {};
+
+    types.forEach(type => {
+      const schemaType = this.crudModel.base[type];
+      if (schemaType && schemaType.cast) {
+        validators[type] = schemaType.cast();
+        schemaType.cast(v => {
+          try {
+            return validators[type](v);
+          } catch (e) {
+            return v;
+          }
+        });
+      }
+    });
+
     if (mongoRequest.request) {
       // append conditions based on authorization
       mongoRequest.conditions = {
@@ -115,8 +133,7 @@ export abstract class CrudService<IModel extends Document> {
       selection
     );
 
-    // todo: disable cast errors
-
+    // execute the find query
     const response = await this.crudModel
       .find(mongoRequest.conditions, null, {
         ...mongoRequest.options,
@@ -128,7 +145,10 @@ export abstract class CrudService<IModel extends Document> {
       .populate(populateOptions)
       .exec();
 
-    // todo: enable cast errors
+    // enable cast errors
+    Object.keys(validators).forEach(type =>
+      this.crudModel.base[type].cast(validators[type])
+    );
 
     return response;
   }
