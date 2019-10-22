@@ -1,4 +1,5 @@
 import { INestApplication } from "@nestjs/common";
+import { ObjectId } from "bson";
 import { ContextInterceptor } from "../interceptors";
 
 /**
@@ -12,4 +13,5 @@ export const initNestUtilities = (app: INestApplication | any) => {
 /**
  * Validates if the given value is an object ID
  */
-export const isObjectID = new RegExp("^[0-9a-fA-F]{24}$").test;
+export const isObjectID = (v: string | ObjectId) =>
+  /^[0-9a-fA-F]{24}$/.test(v.toString());
