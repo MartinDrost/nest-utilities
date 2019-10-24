@@ -1,8 +1,8 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import _isNil from "lodash/isNil";
 import _mergeWith from "lodash/mergeWith";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
-import { IMongoConditions } from "../interfaces";
+import { IMongoConditions, INURequest } from "../interfaces";
 import { IMongoRequest } from "../interfaces/mongoRequest.interface";
 import { isObjectID } from "../utilities";
 
@@ -19,6 +19,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async create(
     modelItem: Omit<IModel, keyof Document>,
+    request?: INURequest | any,
     ...args: any[]
   ): Promise<IModel> {
     // make sure no leftover id exists
@@ -35,8 +36,13 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async createOrPatch(
     modelItem: IModel,
+    request?: INURequest | any,
     ...args: any[]
   ): Promise<IModel> {
+    if (request) {
+      modelItem = (await this.onCreateRequest(request, modelItem)) as IModel;
+    }
+
     if (modelItem._id || modelItem.id) {
       const existing = await this.get(modelItem._id || modelItem.id);
       if (existing !== null) {
@@ -107,13 +113,11 @@ export abstract class CrudService<IModel extends Document> {
 
     if (mongoRequest.request) {
       // append conditions based on authorization
-      mongoRequest.conditions = {
-        ...mongoRequest.conditions,
-        ...(await this.onFindRequest(mongoRequest.request, {
-          $and: [{}],
-          ...mongoRequest.conditions
-        }))
-      };
+      mongoRequest.conditions = mongoRequest.conditions || {};
+      mongoRequest.conditions["$and"] = [
+        ...(mongoRequest.conditions["$and"] || []),
+        ...(await this.onFindRequest(mongoRequest.request))
+      ];
 
       if (mongoRequest.request.context) {
         // store the amount of documents without limit in a response header
@@ -180,6 +184,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async patch(
     modelItem: Partial<IModel>,
+    request?: INURequest | any,
     ...args: any[]
   ): Promise<IModel> {
     const existing = await this.get(modelItem._id || modelItem.id || "");
@@ -187,12 +192,15 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
-    modelItem = await this.preSave(modelItem);
+    let model = await this.preSave(modelItem);
+    if (request) {
+      model = await this.onUpdateRequest(request, model);
+    }
 
     // remove version number
-    delete modelItem.__v;
+    delete model.__v;
 
-    return _mergeWith(existing, modelItem, (obj, src) =>
+    return _mergeWith(existing, model, (obj, src) =>
       !_isNil(src) ? src : obj
     ).save();
   }
@@ -202,8 +210,15 @@ export abstract class CrudService<IModel extends Document> {
    * @param modelItem
    * @param args
    */
-  public async put(modelItem: IModel, ...args: any): Promise<IModel> {
-    const model = await this.preSave(modelItem);
+  public async put(
+    modelItem: IModel,
+    request?: INURequest | any,
+    ...args: any
+  ): Promise<IModel> {
+    let model = await this.preSave(modelItem);
+    if (request) {
+      model = (await this.onUpdateRequest(request, model)) as IModel;
+    }
 
     // remove version number
     delete model.__v;
@@ -215,9 +230,16 @@ export abstract class CrudService<IModel extends Document> {
    * Delete a modelItem by its id
    * @param id
    */
-  public async delete(id: string, ...args: any[]): Promise<IModel | null> {
+  public async delete(
+    id: string,
+    request?: INURequest | any,
+    ...args: any[]
+  ): Promise<IModel | null> {
     if (isObjectID(id) === false) {
       return null;
+    }
+    if (request) {
+      await this.onDeleteRequest(request, id);
     }
 
     return this.crudModel.findByIdAndRemove(id).exec();
@@ -228,11 +250,15 @@ export abstract class CrudService<IModel extends Document> {
    * @param conditions
    */
   public async findAndDelete(
-    conditions: Partial<IModel>
+    conditions: Partial<IModel>,
+    request?: INURequest | any,
+    ...args: any[]
   ): Promise<(IModel | null)[]> {
     const found = await this.find({ conditions });
 
-    return await Promise.all(found.map(model => this.delete(model._id)!));
+    return await Promise.all(
+      found.map(model => this.delete(model._id, request)!)
+    );
   }
 
   /**
@@ -259,7 +285,7 @@ export abstract class CrudService<IModel extends Document> {
     model: IModel,
     paths: string[] = [],
     picks: string[] = [],
-    request?: Request
+    request?: INURequest | any
   ): Promise<IModel> {
     if (!model.populate) {
       if (!model._id && !model.id) {
@@ -294,7 +320,7 @@ export abstract class CrudService<IModel extends Document> {
   private async getPopulateParams(
     paths: string[],
     picks: string[] = [],
-    request?: Request
+    request?: INURequest | any
   ): Promise<ModelPopulateOptions[]> {
     return (await Promise.all(
       paths.map(path => this.deepPopulate(path, picks, request))
@@ -312,7 +338,7 @@ export abstract class CrudService<IModel extends Document> {
   private async deepPopulate(
     path: string,
     picks: string[],
-    request?: Request,
+    request?: INURequest | any,
     journey: string[] = []
   ): Promise<ModelPopulateOptions | undefined> {
     if (!path) {
@@ -340,10 +366,12 @@ export abstract class CrudService<IModel extends Document> {
     return {
       path: currentPosition,
       select: selection.join(" ") || undefined,
-      match: await this.getPopulateConditions(
-        [...journey, currentPosition].join("."),
-        request
-      ),
+      match: {
+        $and: await this.getPopulateConditions(
+          [...journey, currentPosition].join("."),
+          request
+        )
+      },
       populate:
         (await this.deepPopulate(pathParts.join("."), picks, request, [
           ...journey,
@@ -359,7 +387,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   private async getPopulateConditions(
     path: string,
-    request?: Request
+    request?: INURequest | any
   ): Promise<IMongoConditions> {
     // no request means no user to authorize
     if (!request) {
@@ -387,7 +415,7 @@ export abstract class CrudService<IModel extends Document> {
       }
     });
 
-    return service.onFindRequest(request, { $and: [] });
+    return service.onFindRequest(request);
   }
 
   /**
@@ -403,11 +431,9 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * This method is called when the application requires Mongoose conditions
-   * which limits the requesting user to content he/she is able to see.
-   * When writing the authorization conditions you should take the conditions
-   * parameter into account since it originates from another point in the
-   * application. The object should therefore be extended instead of overwritten.
+   * This method is called when a create request has been initiated with an Express Request object as param.
+   * The model returned from the method will be used in the create call which allows you to alter the
+   * object based on the rights of the requester or throw an (http)error if the request may not be completed.
    *
    * The request originates from Express and ideally contains a user object
    * to decide the right conditions.
@@ -415,10 +441,68 @@ export abstract class CrudService<IModel extends Document> {
    * Override this method to use it.
    *
    * @param request the Express request originating from the controller
-   * @param conditions already set conditions to be extended upon
+   * @param model the model which is to be created
    */
-  public abstract async onFindRequest(
-    request: Request | any,
-    conditions: IMongoConditions
-  ): Promise<IMongoConditions>;
+  public async onCreateRequest(
+    request: INURequest | any,
+    model: Partial<IModel>
+  ): Promise<Partial<IModel>> {
+    return model;
+  }
+
+  /**
+   * This method is called when a find request has been initiated with an Express Request object as param.
+   * The response should consist of an array of conditions which will be appended to the `$and` field of
+   * the Mongoose query.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   */
+  public async onFindRequest(
+    request: INURequest | any
+  ): Promise<IMongoConditions[]> {
+    return [];
+  }
+
+  /**
+   * This method is called when an update request has been initiated with an Express Request object as param.
+   * The model returned from the method will be used in the update call which allows you to alter the
+   * object based on the rights of the requester or throw an (http)error if the request may not be completed.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param model the new version of the model which is to be updated
+   */
+  public async onUpdateRequest(
+    request: INURequest | any,
+    model: Partial<IModel>
+  ): Promise<Partial<IModel>> {
+    return model;
+  }
+
+  /**
+   * This method is called when a delete request has been initiated with an Express Request object as param.
+   * The id of the model has been provided as param. This allows you to check if the user has the correct
+   * rights and throw an error if the request may not be completed.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param id the id of the model the request is trying to delete
+   */
+  public async onDeleteRequest(
+    request: INURequest | any,
+    id: string
+  ): Promise<void> {}
 }
