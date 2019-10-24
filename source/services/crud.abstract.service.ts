@@ -115,6 +115,7 @@ export abstract class CrudService<IModel extends Document> {
       // append conditions based on authorization
       mongoRequest.conditions = mongoRequest.conditions || {};
       mongoRequest.conditions["$and"] = [
+        {},
         ...(mongoRequest.conditions["$and"] || []),
         ...(await this.onFindRequest(mongoRequest.request))
       ];
@@ -367,10 +368,13 @@ export abstract class CrudService<IModel extends Document> {
       path: currentPosition,
       select: selection.join(" ") || undefined,
       match: {
-        $and: await this.getPopulateConditions(
-          [...journey, currentPosition].join("."),
-          request
-        )
+        $and: [
+          {},
+          ...(await this.getPopulateConditions(
+            [...journey, currentPosition].join("."),
+            request
+          ))
+        ]
       },
       populate:
         (await this.deepPopulate(pathParts.join("."), picks, request, [
@@ -388,10 +392,10 @@ export abstract class CrudService<IModel extends Document> {
   private async getPopulateConditions(
     path: string,
     request?: INURequest | any
-  ): Promise<IMongoConditions> {
+  ): Promise<IMongoConditions[]> {
     // no request means no user to authorize
     if (!request) {
-      return {};
+      return [];
     }
 
     // iterate through the path to find the correct service to populate

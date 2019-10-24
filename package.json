@@ -1,6 +1,6 @@
 {
   "name": "nest-utilities",
-  "version": "7.1.2",
+  "version": "7.1.22",
   "description": "Supplements your Nestjs application with conistency and CRUD utilities.",
   "main": "distribution/index.js",
   "scripts": {
