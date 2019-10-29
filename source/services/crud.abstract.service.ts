@@ -139,6 +139,9 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     // build population params
+    if (mongoRequest.populate && mongoRequest.populate.length === 0) {
+      mongoRequest.populate = this.getReferenceVirtuals();
+    }
     const selection = (mongoRequest.options || { select: [] }).select || [];
     const populateOptions = await this.getPopulateParams(
       mongoRequest.populate || [],
@@ -150,7 +153,6 @@ export abstract class CrudService<IModel extends Document> {
     const response = await this.crudModel
       .find(mongoRequest.conditions, null, {
         ...mongoRequest.options,
-        populate: undefined,
 
         // join the selection and filter out deep selections
         select: selection.filter(field => !field.includes(".")).join(" ")

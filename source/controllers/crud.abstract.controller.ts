@@ -237,12 +237,10 @@ export abstract class CrudController<IModel extends Document> {
    * Converts http query params to populatable params
    * @param query
    */
-  private queryToPopulate(query: IHttpOptions): string[] {
+  private queryToPopulate(query: IHttpOptions): string[] | undefined {
     if (query.populate === undefined) {
-      return [];
+      return undefined;
     }
-    return query.populate
-      ? query.populate.split(",")
-      : this.crudService.getReferenceVirtuals();
+    return (query.populate || "").split(",");
   }
 }
