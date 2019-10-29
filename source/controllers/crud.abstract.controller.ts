@@ -191,23 +191,29 @@ export abstract class CrudController<IModel extends Document> {
     ].map(conditionPair => {
       const conditions: IMongoConditions[] = [];
       Object.keys(conditionPair).forEach(key => {
+        const keyConditions: IMongoConditions[] = [];
         const value = conditionPair[key];
         if (schema[key] && schema[key].type === String) {
-          conditions.push({ [key]: { $regex: value, $options: "i" } });
+          keyConditions.push({ [key]: { $regex: value, $options: "i" } });
         }
 
         if (!isNaN(+value)) {
-          conditions.push({ [key]: +value });
+          keyConditions.push({ [key]: +value });
         }
 
-        conditions.push({ [key]: value });
+        keyConditions.push({ [key]: value });
+
+        conditions.push({ $or: keyConditions });
       });
 
       return conditions;
     });
 
-    const [$or, $and] = conditions;
-    return { $or: [{}, ...$or], $and: [{}, ...$and] };
+    let [$or, $and] = conditions;
+    $or = $or.length ? $or : [{}];
+    $and = $and.length ? $and : [{}];
+
+    return { $or, $and };
   }
   /**
    * Converts http query params to Mongoose options
