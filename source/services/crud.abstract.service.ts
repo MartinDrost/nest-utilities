@@ -401,18 +401,20 @@ export abstract class CrudService<IModel extends Document> {
     // iterate through the path to find the correct service to populate
     let service: CrudService<any> = this;
     let haystack = {
-      ...service.crudModel.schema,
+      ...service.crudModel.schema.obj,
       ...(service.crudModel.schema as any).virtuals
     };
-    path.split(",").forEach(position => {
+
+    path.split(".").forEach(position => {
       if (haystack[position]) {
         haystack = haystack[position];
 
         // switch services if we encounter a reference
-        if (haystack.ref) {
-          service = CrudService.serviceMap[haystack.ref];
+        const ref = haystack.options ? haystack.options.ref : haystack.ref;
+        if (ref) {
+          service = CrudService.serviceMap[ref];
           haystack = {
-            ...service.crudModel.schema,
+            ...service.crudModel.schema.obj,
             ...(service.crudModel.schema as any).virtuals
           };
         }

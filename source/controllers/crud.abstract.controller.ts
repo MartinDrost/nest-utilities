@@ -171,39 +171,44 @@ export abstract class CrudController<IModel extends Document> {
    * @param query
    */
   private queryToConditions(query: IHttpOptions): IMongoConditions {
-    const $or: any[] = [];
-
+    const searchOptions = {};
     // map search conditions to the filter since they behave the same
     if (query.search) {
-      query.filter = query.filter || {};
       const scope = query.searchScope
         ? query.searchScope.split(",")
         : ["_id", ...Object.keys(this.crudService.getSchema())];
 
       scope.forEach(key => {
-        query.filter![key] = query.search || "";
+        searchOptions[key] = query.search || "";
       });
     }
 
     // create filter conditions
     const schema = this.crudService.getSchema();
-    Object.keys(query.filter || {}).forEach(key => {
-      const value = query.filter![key];
+    const conditions: IMongoConditions[][] = [
+      searchOptions,
+      query.filter || {}
+    ].map(conditionPair => {
+      const conditions: IMongoConditions[] = [];
+      Object.keys(conditionPair).forEach(key => {
+        const value = conditionPair[key];
+        if (schema[key] && schema[key].type === String) {
+          conditions.push({ [key]: { $regex: value, $options: "i" } });
+        }
 
-      if (schema[key] && schema[key].type === String) {
-        $or.push({ [key]: { $regex: value, $options: "i" } });
-      }
+        if (!isNaN(+value)) {
+          conditions.push({ [key]: +value });
+        }
 
-      if (!isNaN(+value)) {
-        $or.push({ [key]: +value });
-      }
+        conditions.push({ [key]: value });
+      });
 
-      $or.push({ [key]: value });
+      return conditions;
     });
 
-    return $or.length ? { $or } : {};
+    const [$or, $and] = conditions;
+    return { $or: [{}, ...$or], $and: [{}, ...$and] };
   }
-
   /**
    * Converts http query params to Mongoose options
    * @param query
