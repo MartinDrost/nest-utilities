@@ -1,3 +1,3 @@
-export interface IMongoConditions {
+export interface IMongoConditions<Model = any> {
   [key: string]: any;
 }

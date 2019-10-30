@@ -66,9 +66,7 @@ export abstract class CrudService<IModel extends Document> {
       return null;
     }
 
-    mongoRequest.conditions = { ...mongoRequest.conditions, _id: id };
-
-    return this.findOne(mongoRequest);
+    return this.findOne({ _id: id }, mongoRequest);
   }
 
   /**
@@ -76,11 +74,12 @@ export abstract class CrudService<IModel extends Document> {
    * @param mongoRequest
    */
   public async findOne(
+    conditions: IMongoConditions = {},
     mongoRequest: IMongoRequest = {}
   ): Promise<IModel | null> {
     mongoRequest.options = { ...mongoRequest.options, limit: 1 };
 
-    const response = await this.find(mongoRequest);
+    const response = await this.find(conditions, mongoRequest);
     if (response.length) {
       return response[0];
     }
@@ -92,7 +91,10 @@ export abstract class CrudService<IModel extends Document> {
    * Find models
    * @param options
    */
-  public async find(mongoRequest: IMongoRequest = {}): Promise<IModel[]> {
+  public async find(
+    conditions: IMongoConditions = {},
+    mongoRequest: IMongoRequest = {}
+  ): Promise<IModel[]> {
     //disable cast errors
     const types = Object.keys(this.crudModel.base.SchemaTypes);
     const validators: { [type: string]: Function } = {};
@@ -111,14 +113,20 @@ export abstract class CrudService<IModel extends Document> {
       }
     });
 
+    // merge filters and conditions
+    conditions = _mergeWith(
+      conditions,
+      mongoRequest.filters || {},
+      (obj, src) => (!_isNil(src) ? src : obj)
+    );
+
     if (mongoRequest.request) {
-      // append conditions based on authorization
-      mongoRequest.conditions = mongoRequest.conditions || {};
-      mongoRequest.conditions["$and"] = [
-        {},
-        ...(mongoRequest.conditions["$and"] || []),
-        ...(await this.onFindRequest(mongoRequest.request))
-      ];
+      // merge authorization conditions
+      conditions = _mergeWith(
+        conditions,
+        { $and: [{}, ...(await this.onFindRequest(mongoRequest.request))] },
+        (obj, src) => (!_isNil(src) ? src : obj)
+      );
 
       if (mongoRequest.request.context) {
         // store the amount of documents without limit in a response header
@@ -127,7 +135,7 @@ export abstract class CrudService<IModel extends Document> {
           .getResponse<Response>();
 
         const numberOfDocuments = await this.crudModel
-          .countDocuments(mongoRequest.conditions)
+          .countDocuments(conditions)
           .exec();
 
         response.header("X-total-count", numberOfDocuments.toString());
@@ -142,6 +150,8 @@ export abstract class CrudService<IModel extends Document> {
     if (mongoRequest.populate && mongoRequest.populate.length === 0) {
       mongoRequest.populate = this.getReferenceVirtuals();
     }
+    // join the sort options
+    const sort = ((mongoRequest.options || { sort: [] }).sort || []).join(" ");
     const selection = (mongoRequest.options || { select: [] }).select || [];
     const populateOptions = await this.getPopulateParams(
       mongoRequest.populate || [],
@@ -151,9 +161,9 @@ export abstract class CrudService<IModel extends Document> {
 
     // execute the find query
     const response = await this.crudModel
-      .find(mongoRequest.conditions, null, {
+      .find(conditions, null, {
         ...mongoRequest.options,
-
+        sort,
         // join the selection and filter out deep selections
         select: selection.filter(field => !field.includes(".")).join(" ")
       })
@@ -177,8 +187,7 @@ export abstract class CrudService<IModel extends Document> {
     mongoRequest: IMongoRequest = {},
     ...args: any[]
   ): Promise<IModel[]> {
-    mongoRequest.conditions = { ...mongoRequest.conditions, _id: ids };
-    return this.find(mongoRequest);
+    return this.find({ _id: ids }, mongoRequest);
   }
 
   /**
@@ -241,8 +250,13 @@ export abstract class CrudService<IModel extends Document> {
     if (isObjectID(id) === false) {
       return null;
     }
+    const model = await this.get(id);
+    if (!model) {
+      return null;
+    }
+
     if (request) {
-      await this.onDeleteRequest(request, id);
+      await this.onDeleteRequest(request, model);
     }
 
     return this.crudModel.findByIdAndRemove(id).exec();
@@ -257,7 +271,7 @@ export abstract class CrudService<IModel extends Document> {
     request?: INURequest | any,
     ...args: any[]
   ): Promise<(IModel | null)[]> {
-    const found = await this.find({ conditions });
+    const found = await this.find(conditions);
 
     return await Promise.all(
       found.map(model => this.delete(model._id, request)!)
@@ -511,6 +525,6 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async onDeleteRequest(
     request: INURequest | any,
-    id: string
+    model: IModel
   ): Promise<void> {}
 }

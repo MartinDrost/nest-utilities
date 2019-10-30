@@ -20,6 +20,7 @@ import { ICrudPermission, IHttpOptions, INURequest } from "../interfaces";
 import { ICrudPermissions } from "../interfaces/crudPermissions.interface";
 import { IMongoConditions } from "../interfaces/mongoConditions.interface";
 import { IMongoOptions } from "../interfaces/mongoOptions.interface";
+import { IMongoRequest } from "../interfaces/mongoRequest.interface";
 import { CrudService } from "../services/crud.abstract.service";
 
 export abstract class CrudController<IModel extends Document> {
@@ -47,10 +48,8 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    return this.crudService.find({
-      request,
-      ...this.toMongooseParams(query)
-    });
+    const params = this.toMongooseParams(query);
+    return this.crudService.find({}, { request, ...params });
   }
 
   @Get(":id")
@@ -62,10 +61,8 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    const model = await this.crudService.get(id, {
-      request,
-      ...this.toMongooseParams(query)
-    });
+    const params = this.toMongooseParams(query);
+    const model = await this.crudService.get(id, { request, ...params });
 
     if (model === null) {
       throw new NotFoundException("No model with that id found");
@@ -83,30 +80,36 @@ export abstract class CrudController<IModel extends Document> {
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    return this.crudService.getMany(ids.split(","), {
-      request,
-      ...this.toMongooseParams(query)
-    });
+    const params = this.toMongooseParams(query);
+    return this.crudService.getMany(ids.split(","), { request, ...params });
   }
 
-  @Put()
+  @Put(":id?")
   put(
     @Req() request: INURequest,
     @Body() model: IModel,
+    @Param("id") id?: string,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request.context);
+    if (id) {
+      model._id = model.id = id;
+    }
 
     return this.crudService.put(model, request);
   }
 
-  @Patch()
+  @Patch(":id?")
   patch(
     @Req() request: INURequest,
     @Body() model: IModel,
+    @Param("id") id?: string,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request.context);
+    if (id) {
+      model._id = model.id = id;
+    }
 
     return this.crudService.patch(model, request);
   }
@@ -158,9 +161,9 @@ export abstract class CrudController<IModel extends Document> {
    * Converts http query params to Mongoose query Params
    * @param query
    */
-  protected toMongooseParams(query: IHttpOptions) {
+  protected toMongooseParams(query: IHttpOptions): IMongoRequest {
     return {
-      conditions: this.queryToConditions(query),
+      filters: this.queryToConditions(query),
       options: this.queryToOptions(query),
       populate: this.queryToPopulate(query)
     };

@@ -4,7 +4,7 @@ import { INURequest } from "./nuRequest.interface";
 
 export interface IMongoRequest {
   request?: INURequest;
-  conditions?: IMongoConditions;
+  filters?: IMongoConditions;
   options?: IMongoOptions;
   populate?: string[];
 }
