@@ -247,6 +247,6 @@ export abstract class CrudController<IModel extends Document> {
     if (query.populate === undefined) {
       return undefined;
     }
-    return (query.populate || "").split(",");
+    return query.populate ? query.populate.split(",") : [];
   }
 }
