@@ -74,7 +74,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param mongoRequest
    */
   public async findOne(
-    conditions: IMongoConditions = {},
+    conditions: IMongoConditions<IModel> = {},
     mongoRequest: IMongoRequest = {}
   ): Promise<IModel | null> {
     mongoRequest.options = { ...mongoRequest.options, limit: 1 };
@@ -92,7 +92,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param options
    */
   public async find(
-    conditions: IMongoConditions = {},
+    conditions: IMongoConditions<IModel> = {},
     mongoRequest: IMongoRequest = {}
   ): Promise<IModel[]> {
     //disable cast errors
@@ -408,7 +408,7 @@ export abstract class CrudService<IModel extends Document> {
   private async getPopulateConditions(
     path: string,
     request?: INURequest | any
-  ): Promise<IMongoConditions[]> {
+  ): Promise<IMongoConditions<IModel>[]> {
     // no request means no user to authorize
     if (!request) {
       return [];
@@ -486,7 +486,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async onFindRequest(
     request: INURequest | any
-  ): Promise<IMongoConditions[]> {
+  ): Promise<IMongoConditions<IModel>[]> {
     return [];
   }
 
