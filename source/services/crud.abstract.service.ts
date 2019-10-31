@@ -1,5 +1,6 @@
 import { Response } from "express";
 import _isNil from "lodash/isNil";
+import _merge from "lodash/merge";
 import _mergeWith from "lodash/mergeWith";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
 import { IMongoConditions, INURequest } from "../interfaces";
@@ -114,19 +115,13 @@ export abstract class CrudService<IModel extends Document> {
     });
 
     // merge filters and conditions
-    conditions = _mergeWith(
-      conditions,
-      mongoRequest.filters || {},
-      (obj, src) => (!_isNil(src) ? src : obj)
-    );
+    conditions = _merge(conditions, mongoRequest.filters || {});
 
     if (mongoRequest.request) {
       // merge authorization conditions
-      conditions = _mergeWith(
-        conditions,
-        { $and: [{}, ...(await this.onFindRequest(mongoRequest.request))] },
-        (obj, src) => (!_isNil(src) ? src : obj)
-      );
+      conditions = _merge(conditions, {
+        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+      });
 
       if (mongoRequest.request.context) {
         // store the amount of documents without limit in a response header
