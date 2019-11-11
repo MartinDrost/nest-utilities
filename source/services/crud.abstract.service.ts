@@ -129,6 +129,14 @@ export abstract class CrudService<IModel extends Document> {
     const projection = {};
     mongoRequest.options?.select?.forEach(field => (projection[field] = 1));
 
+    // get field sorting
+    const sort = {};
+    mongoRequest.options?.sort?.forEach(field => {
+      const desc = field.startsWith("-");
+      const cleanField = desc ? field.replace("-", "") : field;
+      sort[cleanField] = desc ? -1 : 1;
+    });
+
     // build population params
     if (mongoRequest.populate && mongoRequest.populate.length === 0) {
       mongoRequest.populate = this.getReferenceVirtuals();
@@ -144,7 +152,7 @@ export abstract class CrudService<IModel extends Document> {
       .find<IModel>(conditions, {
         skip: mongoRequest.options?.skip,
         limit: mongoRequest.options?.limit,
-        sort: mongoRequest.options?.sort,
+        sort,
         projection
       })
       .toArray();
@@ -540,9 +548,15 @@ export abstract class CrudService<IModel extends Document> {
     return conditions;
   }
 
-  // String, Number, Date, Boolean, ObjectId, Array
+  /**
+   * Cast the value to the given type
+   *
+   * supported types: String, Number, Date, Boolean, ObjectId
+   *
+   * @param value
+   * @param type
+   */
   private castValue(value: any, type: string): any {
-    let cast = value;
     try {
       switch (type) {
         case "String":
@@ -556,10 +570,10 @@ export abstract class CrudService<IModel extends Document> {
         case "Boolean":
           return [true, 1, "true", "1"].includes(value);
         default:
-          return cast;
+          return value;
       }
     } catch {
-      return cast;
+      return value;
     }
   }
 }
