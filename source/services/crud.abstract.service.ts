@@ -25,10 +25,8 @@ export abstract class CrudService<IModel extends Document> {
   ): Promise<IModel> {
     // make sure no leftover id exists
     delete modelItem["_id"];
-    delete modelItem["id"];
 
-    let model = await this.preSave(modelItem as IModel);
-    model = await this.onCreateRequest(request, model);
+    let model = await this.onCreateRequest(request, modelItem as IModel);
 
     return new this.crudModel(model).save();
   }
@@ -143,13 +141,15 @@ export abstract class CrudService<IModel extends Document> {
       }
     }
 
+    // join the sort options
+    const sort = ((mongoRequest.options || { sort: [] }).sort || []).join(" ");
+    // get field selection
+    const selection = (mongoRequest.options || { select: [] }).select || [];
+
     // build population params
     if (mongoRequest.populate && mongoRequest.populate.length === 0) {
       mongoRequest.populate = this.getReferenceVirtuals();
     }
-    // join the sort options
-    const sort = ((mongoRequest.options || { sort: [] }).sort || []).join(" ");
-    const selection = (mongoRequest.options || { select: [] }).select || [];
     const populateOptions = await this.getPopulateParams(
       mongoRequest.populate || [],
       selection,
@@ -201,7 +201,7 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
-    let model = await this.preSave(modelItem);
+    let model = { ...modelItem };
     if (request) {
       model = await this.onUpdateRequest(request, model);
     }
@@ -224,7 +224,7 @@ export abstract class CrudService<IModel extends Document> {
     request?: INURequest | any,
     ...args: any
   ): Promise<IModel> {
-    let model = await this.preSave(modelItem);
+    let model = { ...modelItem };
     if (request) {
       model = (await this.onUpdateRequest(request, model)) as IModel;
     }
@@ -325,6 +325,82 @@ export abstract class CrudService<IModel extends Document> {
   public populateList(models: IModel[]): Promise<IModel[]> {
     return Promise.all(models.map(model => this.populate(model)));
   }
+
+  /**
+   * This method is called when a create request has been initiated with an Express Request object as param.
+   * The model returned from the method will be used in the create call which allows you to alter the
+   * object based on the rights of the requester or throw an (http)error if the request may not be completed.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param model the model which is to be created
+   */
+  public async onCreateRequest(
+    request: INURequest | any,
+    model: Partial<IModel>
+  ): Promise<Partial<IModel>> {
+    return model;
+  }
+
+  /**
+   * This method is called when a find request has been initiated with an Express Request object as param.
+   * The response should consist of an array of conditions which will be appended to the `$and` field of
+   * the Mongoose query.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   */
+  public async onFindRequest(
+    request: INURequest | any
+  ): Promise<IMongoConditions<IModel>[]> {
+    return [];
+  }
+
+  /**
+   * This method is called when an update request has been initiated with an Express Request object as param.
+   * The model returned from the method will be used in the update call which allows you to alter the
+   * object based on the rights of the requester or throw an (http)error if the request may not be completed.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param model the new version of the model which is to be updated
+   */
+  public async onUpdateRequest(
+    request: INURequest | any,
+    model: Partial<IModel>
+  ): Promise<Partial<IModel>> {
+    return model;
+  }
+
+  /**
+   * This method is called when a delete request has been initiated with an Express Request object as param.
+   * The id of the model has been provided as param. This allows you to check if the user has the correct
+   * rights and throw an error if the request may not be completed.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param id the id of the model the request is trying to delete
+   */
+  public async onDeleteRequest(
+    request: INURequest | any,
+    model: IModel
+  ): Promise<void> {}
 
   /**
    * Build and return recursive populate() params for Mongoose
@@ -436,92 +512,4 @@ export abstract class CrudService<IModel extends Document> {
 
     return service.onFindRequest(request);
   }
-
-  /**
-   * Method which is called before create, patch or put is saved.
-   * Override this method to use it.
-   *
-   * Be aware that the provided model can be incomplete because of patch requests.
-   *
-   * @param model
-   */
-  public async preSave(model: Partial<IModel>): Promise<Partial<IModel>> {
-    return model;
-  }
-
-  /**
-   * This method is called when a create request has been initiated with an Express Request object as param.
-   * The model returned from the method will be used in the create call which allows you to alter the
-   * object based on the rights of the requester or throw an (http)error if the request may not be completed.
-   *
-   * The request originates from Express and ideally contains a user object
-   * to decide the right conditions.
-   *
-   * Override this method to use it.
-   *
-   * @param request the Express request originating from the controller
-   * @param model the model which is to be created
-   */
-  public async onCreateRequest(
-    request: INURequest | any,
-    model: Partial<IModel>
-  ): Promise<Partial<IModel>> {
-    return model;
-  }
-
-  /**
-   * This method is called when a find request has been initiated with an Express Request object as param.
-   * The response should consist of an array of conditions which will be appended to the `$and` field of
-   * the Mongoose query.
-   *
-   * The request originates from Express and ideally contains a user object
-   * to decide the right conditions.
-   *
-   * Override this method to use it.
-   *
-   * @param request the Express request originating from the controller
-   */
-  public async onFindRequest(
-    request: INURequest | any
-  ): Promise<IMongoConditions<IModel>[]> {
-    return [];
-  }
-
-  /**
-   * This method is called when an update request has been initiated with an Express Request object as param.
-   * The model returned from the method will be used in the update call which allows you to alter the
-   * object based on the rights of the requester or throw an (http)error if the request may not be completed.
-   *
-   * The request originates from Express and ideally contains a user object
-   * to decide the right conditions.
-   *
-   * Override this method to use it.
-   *
-   * @param request the Express request originating from the controller
-   * @param model the new version of the model which is to be updated
-   */
-  public async onUpdateRequest(
-    request: INURequest | any,
-    model: Partial<IModel>
-  ): Promise<Partial<IModel>> {
-    return model;
-  }
-
-  /**
-   * This method is called when a delete request has been initiated with an Express Request object as param.
-   * The id of the model has been provided as param. This allows you to check if the user has the correct
-   * rights and throw an error if the request may not be completed.
-   *
-   * The request originates from Express and ideally contains a user object
-   * to decide the right conditions.
-   *
-   * Override this method to use it.
-   *
-   * @param request the Express request originating from the controller
-   * @param id the id of the model the request is trying to delete
-   */
-  public async onDeleteRequest(
-    request: INURequest | any,
-    model: IModel
-  ): Promise<void> {}
 }

@@ -129,7 +129,7 @@ export abstract class CrudController<IModel extends Document> {
    * Check permissions based on the provided settings
    * @param permission
    */
-  protected checkPermissions(
+  private checkPermissions(
     permission: ICrudPermission | undefined,
     context: ExecutionContext
   ): void {
@@ -212,6 +212,7 @@ export abstract class CrudController<IModel extends Document> {
       return conditions;
     });
 
+    // search statements should be $or and filter $and
     let [$or, $and] = conditions;
     $or = $or.length ? $or : [{}];
     $and = $and.length ? $and : [{}];
