@@ -27,7 +27,9 @@ export abstract class CrudService<IModel extends Document> {
     delete modelItem["_id"];
     delete modelItem["id"];
 
-    const model = await this.preSave(modelItem as IModel);
+    let model = await this.preSave(modelItem as IModel);
+    model = await this.onCreateRequest(request, model);
+
     return new this.crudModel(model).save();
   }
 

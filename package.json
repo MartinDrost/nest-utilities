@@ -1,7 +1,7 @@
 {
   "name": "nest-utilities",
-  "version": "7.1.41",
-  "description": "Supplements your Nestjs application with conistency and CRUD utilities.",
+  "version": "7.1.43",
+  "description": "Supplements NestJS applications with out of the box CRUD functionality and parameter actions.",
   "main": "distribution/index.js",
   "scripts": {
     "prepublishOnly": "npm run build",
