@@ -151,7 +151,9 @@ export abstract class CrudService<IModel extends Document> {
 
     // hydrate and populate the response
     const models = response.map(model => this.crudModel.hydrate(model));
-    return Promise.all(models.map(model => model.populate(populateOptions)));
+    return Promise.all(
+      models.map(model => model.populate(populateOptions).execPopulate())
+    );
   }
 
   /**
@@ -469,7 +471,7 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     // iterate through the path to find the correct service to populate
-    let service: CrudService<any> = this;
+    let service: CrudService<IModel> = this;
     let haystack = {
       ...service.crudModel.schema.obj,
       ...(service.crudModel.schema as any).virtuals
@@ -499,6 +501,65 @@ export abstract class CrudService<IModel extends Document> {
    * @param conditions
    */
   private cast(conditions: IMongoConditions): IMongoConditions {
+    const obj = this.crudModel.schema.obj;
+    obj._id = { type: { schemaName: "ObjectId" } };
+
+    Object.keys(conditions).forEach(key => {
+      const value = conditions[key];
+      if (key.startsWith("$")) {
+        return (conditions[key] = Array.isArray(value)
+          ? value.map(item => this.cast(item))
+          : this.cast(value));
+      }
+
+      // extract the schema type of the targeted field
+      let type = obj;
+      key.split(".").forEach(layer => {
+        // cancel if we reached a dead end
+        if (!type) {
+          return;
+        }
+
+        // fetch the array type if applicable
+        type = type[layer];
+        if (Array.isArray(type)) {
+          type = type[0];
+        }
+        type = type?.type || type?.obj || type;
+      });
+      type = type?.schemaName;
+
+      // cast the value if a type is found
+      if (type) {
+        conditions[key] = Array.isArray(value)
+          ? value.map(v => this.castValue(v, type))
+          : this.castValue(value, type);
+      }
+    });
+
     return conditions;
+  }
+
+  // String, Number, Date, Boolean, ObjectId, Array
+  private castValue(value: any, type: string): any {
+    let cast = value;
+    try {
+      switch (type) {
+        case "String":
+          return value + "";
+        case "Number":
+          return +value;
+        case "Date":
+          return new Date(value);
+        case "ObjectId":
+          return require("objectid")(value);
+        case "Boolean":
+          return [true, 1, "true", "1"].includes(value);
+        default:
+          return cast;
+      }
+    } catch {
+      return cast;
+    }
   }
 }
