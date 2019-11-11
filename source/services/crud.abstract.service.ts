@@ -96,32 +96,16 @@ export abstract class CrudService<IModel extends Document> {
     conditions: IMongoConditions<IModel> = {},
     mongoRequest: IMongoRequest = {}
   ): Promise<IModel[]> {
-    //disable cast errors
-    const types = Object.keys(this.crudModel.base.SchemaTypes);
-    const validators: { [type: string]: Function } = {};
-
-    types.forEach(type => {
-      const schemaType = this.crudModel.base[type];
-      if (schemaType && schemaType.cast) {
-        validators[type] = schemaType.cast();
-        schemaType.cast(v => {
-          try {
-            return validators[type](v);
-          } catch (e) {
-            return v;
-          }
-        });
-      }
-    });
-
     // merge filters and conditions
-    conditions = _merge(conditions, mongoRequest.filters || {});
+    conditions = this.cast(_merge(conditions, mongoRequest.filters || {}));
 
     if (mongoRequest.request) {
       // merge authorization conditions
-      conditions = _merge(conditions, {
-        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
-      });
+      conditions = this.cast(
+        _merge(conditions, {
+          $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+        })
+      );
 
       if (mongoRequest.request.context) {
         // store the amount of documents without limit in a response header
@@ -129,9 +113,9 @@ export abstract class CrudService<IModel extends Document> {
           .switchToHttp()
           .getResponse<Response>();
 
-        const numberOfDocuments = await this.crudModel
-          .countDocuments(conditions)
-          .exec();
+        const numberOfDocuments = await this.crudModel.collection.countDocuments(
+          conditions
+        );
 
         response.header("X-total-count", numberOfDocuments.toString());
         response.header("Access-Control-Expose-Headers", [
@@ -141,10 +125,9 @@ export abstract class CrudService<IModel extends Document> {
       }
     }
 
-    // join the sort options
-    const sort = ((mongoRequest.options || { sort: [] }).sort || []).join(" ");
     // get field selection
-    const selection = (mongoRequest.options || { select: [] }).select || [];
+    const projection = {};
+    mongoRequest.options?.select?.forEach(field => (projection[field] = 1));
 
     // build population params
     if (mongoRequest.populate && mongoRequest.populate.length === 0) {
@@ -152,27 +135,23 @@ export abstract class CrudService<IModel extends Document> {
     }
     const populateOptions = await this.getPopulateParams(
       mongoRequest.populate || [],
-      selection,
+      Object.keys(projection),
       mongoRequest.request
     );
 
-    // execute the find query
-    const response = await this.crudModel
-      .find(conditions, null, {
-        ...mongoRequest.options,
-        sort,
-        // join the selection and filter out deep selections
-        select: selection.filter(field => !field.includes(".")).join(" ")
+    // execute a find query avoiding Mongoose
+    const response = await this.crudModel.collection
+      .find<IModel>(conditions, {
+        skip: mongoRequest.options?.skip,
+        limit: mongoRequest.options?.limit,
+        sort: mongoRequest.options?.sort,
+        projection
       })
-      .populate(populateOptions)
-      .exec();
+      .toArray();
 
-    // enable cast errors
-    Object.keys(validators).forEach(type =>
-      this.crudModel.base[type].cast(validators[type])
-    );
-
-    return response;
+    // hydrate and populate the response
+    const models = response.map(model => this.crudModel.hydrate(model));
+    return Promise.all(models.map(model => model.populate(populateOptions)));
   }
 
   /**
@@ -412,9 +391,11 @@ export abstract class CrudService<IModel extends Document> {
     picks: string[] = [],
     request?: INURequest | any
   ): Promise<ModelPopulateOptions[]> {
-    return (await Promise.all(
-      paths.map(path => this.deepPopulate(path, picks, request))
-    )).filter(param => param !== undefined) as ModelPopulateOptions[];
+    return (
+      await Promise.all(
+        paths.map(path => this.deepPopulate(path, picks, request))
+      )
+    ).filter(param => param !== undefined) as ModelPopulateOptions[];
   }
 
   /**
@@ -511,5 +492,13 @@ export abstract class CrudService<IModel extends Document> {
     });
 
     return service.onFindRequest(request);
+  }
+
+  /**
+   * Casts the values of the mongo conditions to their corresponding types
+   * @param conditions
+   */
+  private cast(conditions: IMongoConditions): IMongoConditions {
+    return conditions;
   }
 }
