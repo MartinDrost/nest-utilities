@@ -578,7 +578,7 @@ export abstract class CrudService<IModel extends Document> {
         case "Date":
           return new Date(value);
         case "ObjectId":
-          return require("objectid")(value);
+          return require("bson-objectid")(value);
         case "Boolean":
           return [true, 1, "true", "1"].includes(value);
         default:
