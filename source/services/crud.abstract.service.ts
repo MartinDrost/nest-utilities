@@ -96,32 +96,16 @@ export abstract class CrudService<IModel extends Document> {
     conditions: IMongoConditions<IModel> = {},
     mongoRequest: IMongoRequest = {}
   ): Promise<IModel[]> {
-    //disable cast errors
-    const types = Object.keys(this.crudModel.base.SchemaTypes);
-    const validators: { [type: string]: Function } = {};
-
-    types.forEach(type => {
-      const schemaType = this.crudModel.base[type];
-      if (schemaType && schemaType.cast) {
-        validators[type] = schemaType.cast();
-        schemaType.cast(v => {
-          try {
-            return validators[type](v);
-          } catch (e) {
-            return v;
-          }
-        });
-      }
-    });
-
     // merge filters and conditions
-    conditions = _merge(conditions, mongoRequest.filters || {});
+    conditions = this.cast(_merge(conditions, mongoRequest.filters || {}));
 
     if (mongoRequest.request) {
       // merge authorization conditions
-      conditions = _merge(conditions, {
-        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
-      });
+      conditions = this.cast(
+        _merge(conditions, {
+          $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+        })
+      );
 
       if (mongoRequest.request.context) {
         // store the amount of documents without limit in a response header
@@ -129,9 +113,9 @@ export abstract class CrudService<IModel extends Document> {
           .switchToHttp()
           .getResponse<Response>();
 
-        const numberOfDocuments = await this.crudModel
-          .countDocuments(conditions)
-          .exec();
+        const numberOfDocuments = await this.crudModel.collection.countDocuments(
+          conditions
+        );
 
         response.header("X-total-count", numberOfDocuments.toString());
         response.header("Access-Control-Expose-Headers", [
@@ -141,38 +125,43 @@ export abstract class CrudService<IModel extends Document> {
       }
     }
 
-    // join the sort options
-    const sort = ((mongoRequest.options || { sort: [] }).sort || []).join(" ");
     // get field selection
-    const selection = (mongoRequest.options || { select: [] }).select || [];
+    const projection = {};
+    mongoRequest.options?.select?.forEach(field => (projection[field] = 1));
+
+    // get field sorting
+    const sort = {};
+    mongoRequest.options?.sort?.forEach(field => {
+      const desc = field.startsWith("-");
+      const cleanField = desc ? field.replace("-", "") : field;
+      sort[cleanField] = desc ? -1 : 1;
+    });
 
     // build population params
-    if (mongoRequest.populate && mongoRequest.populate.length === 0) {
+    if (mongoRequest.populate?.length === 0) {
       mongoRequest.populate = this.getReferenceVirtuals();
     }
     const populateOptions = await this.getPopulateParams(
       mongoRequest.populate || [],
-      selection,
+      Object.keys(projection),
       mongoRequest.request
     );
 
-    // execute the find query
-    const response = await this.crudModel
-      .find(conditions, null, {
-        ...mongoRequest.options,
+    // execute a find query avoiding Mongoose
+    const response = await this.crudModel.collection
+      .find<IModel>(conditions, {
+        skip: mongoRequest.options?.skip,
+        limit: mongoRequest.options?.limit,
         sort,
-        // join the selection and filter out deep selections
-        select: selection.filter(field => !field.includes(".")).join(" ")
+        projection
       })
-      .populate(populateOptions)
-      .exec();
+      .toArray();
 
-    // enable cast errors
-    Object.keys(validators).forEach(type =>
-      this.crudModel.base[type].cast(validators[type])
+    // hydrate and populate the response
+    const models = response.map(model => this.crudModel.hydrate(model));
+    return Promise.all(
+      models.map(model => model.populate(populateOptions).execPopulate())
     );
-
-    return response;
   }
 
   /**
@@ -412,9 +401,11 @@ export abstract class CrudService<IModel extends Document> {
     picks: string[] = [],
     request?: INURequest | any
   ): Promise<ModelPopulateOptions[]> {
-    return (await Promise.all(
-      paths.map(path => this.deepPopulate(path, picks, request))
-    )).filter(param => param !== undefined) as ModelPopulateOptions[];
+    return (
+      await Promise.all(
+        paths.map(path => this.deepPopulate(path, picks, request))
+      )
+    ).filter(param => param !== undefined) as ModelPopulateOptions[];
   }
 
   /**
@@ -488,7 +479,7 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     // iterate through the path to find the correct service to populate
-    let service: CrudService<any> = this;
+    let service: CrudService<IModel> = this;
     let haystack = {
       ...service.crudModel.schema.obj,
       ...(service.crudModel.schema as any).virtuals
@@ -511,5 +502,90 @@ export abstract class CrudService<IModel extends Document> {
     });
 
     return service.onFindRequest(request);
+  }
+
+  /**
+   * Casts the values of the mongo conditions to their corresponding types
+   * @param conditions
+   */
+  private cast(conditions: IMongoConditions): IMongoConditions {
+    Object.keys(conditions).forEach(key => {
+      const value = conditions[key];
+      if (key.startsWith("$")) {
+        return (conditions[key] = Array.isArray(value)
+          ? value.map(item => this.cast(item))
+          : this.cast(value));
+      }
+
+      // cast the value if a type is found
+      const type = this.getFieldType(key);
+      if (type) {
+        conditions[key] = Array.isArray(value)
+          ? value.map(v => this.castValue(v, type))
+          : this.castValue(value, type);
+      }
+    });
+
+    return conditions;
+  }
+
+  /**
+   * Returns the type of the given field
+   * @param path
+   */
+  public getFieldType(path: string): string | null {
+    const field = path.split(".").pop();
+    if (field === "_id") {
+      return "ObjectId";
+    }
+
+    let object = this.getSchema();
+    path.split(".").forEach(key => {
+      if (!object) {
+        return;
+      }
+
+      object = object[key];
+      if (Array.isArray(object)) {
+        object = object[0];
+      }
+      object = object?.type || object;
+      object = object?.obj || object;
+    });
+
+    return object?.name || object?.schemaName || null;
+  }
+
+  /**
+   * Cast the value to the given type
+   *
+   * supported types: String, Number, Date, Boolean, ObjectId
+   *
+   * @param value
+   * @param type
+   */
+  private castValue(value: any, type: string): any {
+    if (Array.isArray(value) || typeof value === "object") {
+      return value;
+    }
+
+    try {
+      switch (type) {
+        case "String":
+          return value + "";
+        case "Number":
+          return +value;
+        case "Date":
+          return new Date(value);
+        case "ObjectId":
+          return require("objectid")(value);
+        case "Boolean":
+          return [true, 1, "true", "1"].includes(value);
+        default:
+          return value;
+      }
+    } catch {
+      return value;
+    }
   }
 }
