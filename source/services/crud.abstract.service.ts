@@ -138,7 +138,7 @@ export abstract class CrudService<IModel extends Document> {
     });
 
     // build population params
-    if (mongoRequest.populate && mongoRequest.populate.length === 0) {
+    if (mongoRequest.populate?.length === 0) {
       mongoRequest.populate = this.getReferenceVirtuals();
     }
     const populateOptions = await this.getPopulateParams(
@@ -509,9 +509,6 @@ export abstract class CrudService<IModel extends Document> {
    * @param conditions
    */
   private cast(conditions: IMongoConditions): IMongoConditions {
-    const obj = this.crudModel.schema.obj;
-    obj._id = { type: { schemaName: "ObjectId" } };
-
     Object.keys(conditions).forEach(key => {
       const value = conditions[key];
       if (key.startsWith("$")) {
@@ -520,24 +517,8 @@ export abstract class CrudService<IModel extends Document> {
           : this.cast(value));
       }
 
-      // extract the schema type of the targeted field
-      let type = obj;
-      key.split(".").forEach(layer => {
-        // cancel if we reached a dead end
-        if (!type) {
-          return;
-        }
-
-        // fetch the array type if applicable
-        type = type[layer];
-        if (Array.isArray(type)) {
-          type = type[0];
-        }
-        type = type?.type || type?.obj || type;
-      });
-      type = type?.schemaName;
-
       // cast the value if a type is found
+      const type = this.getFieldType(key);
       if (type) {
         conditions[key] = Array.isArray(value)
           ? value.map(v => this.castValue(v, type))
@@ -549,6 +530,33 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * Returns the type of the given field
+   * @param path
+   */
+  public getFieldType(path: string): string | null {
+    const field = path.split(".").pop();
+    if (field === "_id") {
+      return "ObjectId";
+    }
+
+    let object = this.getSchema();
+    path.split(".").forEach(key => {
+      if (!object) {
+        return;
+      }
+
+      object = object[key];
+      if (Array.isArray(object)) {
+        object = object[0];
+      }
+      object = object?.type || object;
+      object = object?.obj || object;
+    });
+
+    return object?.name || object?.schemaName || null;
+  }
+
+  /**
    * Cast the value to the given type
    *
    * supported types: String, Number, Date, Boolean, ObjectId
@@ -557,6 +565,10 @@ export abstract class CrudService<IModel extends Document> {
    * @param type
    */
   private castValue(value: any, type: string): any {
+    if (Array.isArray(value) || typeof value === "object") {
+      return value;
+    }
+
     try {
       switch (type) {
         case "String":

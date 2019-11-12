@@ -187,7 +187,6 @@ export abstract class CrudController<IModel extends Document> {
     }
 
     // create filter conditions
-    const schema = this.crudService.getSchema();
     const conditions: IMongoConditions[][] = [
       searchOptions,
       query.filter || {}
@@ -196,7 +195,8 @@ export abstract class CrudController<IModel extends Document> {
       Object.keys(conditionPair).forEach(key => {
         const keyConditions: IMongoConditions[] = [];
         const value = conditionPair[key];
-        if (schema[key] && schema[key].type === String) {
+
+        if (this.crudService.getFieldType(key) === "String") {
           keyConditions.push({ [key]: { $regex: value, $options: "i" } });
         }
 
