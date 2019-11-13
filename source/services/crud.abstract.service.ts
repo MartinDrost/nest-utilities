@@ -40,9 +40,7 @@ export abstract class CrudService<IModel extends Document> {
     request?: INURequest | any,
     ...args: any[]
   ): Promise<IModel> {
-    if (request) {
-      modelItem = (await this.onCreateRequest(request, modelItem)) as IModel;
-    }
+    modelItem = (await this.onCreateRequest(request, modelItem)) as IModel;
 
     if (modelItem._id || modelItem.id) {
       const existing = await this.get(modelItem._id || modelItem.id);
@@ -89,6 +87,26 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * Counts the number of documents which should be returned with the given conditions.
+   * If defined, the onFindRequest conditions will also be appended
+   * @param conditions
+   * @param mongoRequest
+   */
+  public async countDocuments(
+    conditions: IMongoConditions<IModel> = {},
+    mongoRequest: Pick<IMongoRequest, "request" | "filters"> = {}
+  ): Promise<number> {
+    // merge filters and conditions
+    conditions = this.cast(
+      _merge(conditions, mongoRequest.filters || {}, {
+        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+      })
+    );
+
+    return this.crudModel.countDocuments(conditions);
+  }
+
+  /**
    * Find models
    * @param options
    */
@@ -97,37 +115,32 @@ export abstract class CrudService<IModel extends Document> {
     mongoRequest: IMongoRequest = {}
   ): Promise<IModel[]> {
     // merge filters and conditions
-    conditions = this.cast(_merge(conditions, mongoRequest.filters || {}));
+    conditions = this.cast(
+      _merge(conditions, mongoRequest.filters || {}, {
+        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+      })
+    );
 
-    if (mongoRequest.request) {
-      // merge authorization conditions
-      conditions = this.cast(
-        _merge(conditions, {
-          $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
-        })
-      );
+    if (mongoRequest.request?.context) {
+      // store the amount of documents without limit in a response header
+      const response = mongoRequest.request.context
+        .switchToHttp()
+        .getResponse<Response>();
 
-      if (mongoRequest.request.context) {
-        // store the amount of documents without limit in a response header
-        const response = mongoRequest.request.context
-          .switchToHttp()
-          .getResponse<Response>();
+      const numberOfDocuments = await this.crudModel.countDocuments(conditions);
 
-        const numberOfDocuments = await this.crudModel.collection.countDocuments(
-          conditions
-        );
-
-        response.header("X-total-count", numberOfDocuments.toString());
-        response.header("Access-Control-Expose-Headers", [
-          "X-total-count",
-          (response.getHeader("Access-Control-Expose-Headers") || "").toString()
-        ]);
-      }
+      response.header("X-total-count", numberOfDocuments.toString());
+      response.header("Access-Control-Expose-Headers", [
+        "X-total-count",
+        (response.getHeader("Access-Control-Expose-Headers") || "").toString()
+      ]);
     }
 
     // get field selection
     const projection = {};
-    mongoRequest.options?.select?.forEach(field => (projection[field] = 1));
+    mongoRequest.options?.select
+      ?.filter(field => !field.includes("."))
+      .forEach(field => (projection[field] = 1));
 
     // get field sorting
     const sort = {};
@@ -158,10 +171,14 @@ export abstract class CrudService<IModel extends Document> {
       .toArray();
 
     // hydrate and populate the response
-    const models = response.map(model => this.crudModel.hydrate(model));
-    return Promise.all(
-      models.map(model => model.populate(populateOptions).execPopulate())
+    const models = response.map(model =>
+      this.crudModel
+        .hydrate(model)
+        .populate(populateOptions)
+        .execPopulate()
     );
+
+    return Promise.all(models);
   }
 
   /**
@@ -191,9 +208,7 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     let model = { ...modelItem };
-    if (request) {
-      model = await this.onUpdateRequest(request, model);
-    }
+    model = await this.onUpdateRequest(request, model);
 
     // remove version number
     delete model.__v;
@@ -214,9 +229,7 @@ export abstract class CrudService<IModel extends Document> {
     ...args: any
   ): Promise<IModel> {
     let model = { ...modelItem };
-    if (request) {
-      model = (await this.onUpdateRequest(request, model)) as IModel;
-    }
+    model = (await this.onUpdateRequest(request, model)) as IModel;
 
     // remove version number
     delete model.__v;
@@ -241,9 +254,7 @@ export abstract class CrudService<IModel extends Document> {
       return null;
     }
 
-    if (request) {
-      await this.onDeleteRequest(request, model);
-    }
+    await this.onDeleteRequest(request, model);
 
     return this.crudModel.findByIdAndRemove(id).exec();
   }
@@ -316,7 +327,7 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
-   * This method is called when a create request has been initiated with an Express Request object as param.
+   * This method is called when a create request has been initiated.
    * The model returned from the method will be used in the create call which allows you to alter the
    * object based on the rights of the requester or throw an (http)error if the request may not be completed.
    *
@@ -329,14 +340,14 @@ export abstract class CrudService<IModel extends Document> {
    * @param model the model which is to be created
    */
   public async onCreateRequest(
-    request: INURequest | any,
-    model: Partial<IModel>
+    model: Partial<IModel>,
+    request?: INURequest | any
   ): Promise<Partial<IModel>> {
     return model;
   }
 
   /**
-   * This method is called when a find request has been initiated with an Express Request object as param.
+   * This method is called when a find or count request has been initiated.
    * The response should consist of an array of conditions which will be appended to the `$and` field of
    * the Mongoose query.
    *
@@ -348,13 +359,13 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    */
   public async onFindRequest(
-    request: INURequest | any
+    request?: INURequest | any
   ): Promise<IMongoConditions<IModel>[]> {
     return [];
   }
 
   /**
-   * This method is called when an update request has been initiated with an Express Request object as param.
+   * This method is called when an update request has been initiated.
    * The model returned from the method will be used in the update call which allows you to alter the
    * object based on the rights of the requester or throw an (http)error if the request may not be completed.
    *
@@ -367,14 +378,14 @@ export abstract class CrudService<IModel extends Document> {
    * @param model the new version of the model which is to be updated
    */
   public async onUpdateRequest(
-    request: INURequest | any,
-    model: Partial<IModel>
+    model: Partial<IModel>,
+    request?: INURequest | any
   ): Promise<Partial<IModel>> {
     return model;
   }
 
   /**
-   * This method is called when a delete request has been initiated with an Express Request object as param.
+   * This method is called when a delete request has been initiated.
    * The id of the model has been provided as param. This allows you to check if the user has the correct
    * rights and throw an error if the request may not be completed.
    *
@@ -387,8 +398,8 @@ export abstract class CrudService<IModel extends Document> {
    * @param id the id of the model the request is trying to delete
    */
   public async onDeleteRequest(
-    request: INURequest | any,
-    model: IModel
+    model: IModel,
+    request?: INURequest | any
   ): Promise<void> {}
 
   /**
