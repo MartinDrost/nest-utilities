@@ -340,9 +340,9 @@ export abstract class CrudService<IModel extends Document> {
    * @param model the model which is to be created
    */
   public async onCreateRequest(
-    model: Partial<IModel>,
+    model: IModel,
     request?: INURequest | any
-  ): Promise<Partial<IModel>> {
+  ): Promise<IModel> {
     return model;
   }
 
