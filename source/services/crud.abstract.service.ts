@@ -26,7 +26,7 @@ export abstract class CrudService<IModel extends Document> {
     // make sure no leftover id exists
     delete modelItem["_id"];
 
-    let model = await this.onCreateRequest(request, modelItem as IModel);
+    let model = await this.onCreateRequest(modelItem, request);
 
     return new this.crudModel(model).save();
   }
@@ -40,7 +40,7 @@ export abstract class CrudService<IModel extends Document> {
     request?: INURequest | any,
     ...args: any[]
   ): Promise<IModel> {
-    modelItem = (await this.onCreateRequest(request, modelItem)) as IModel;
+    modelItem = (await this.onCreateRequest(modelItem, request)) as IModel;
 
     if (modelItem._id || modelItem.id) {
       const existing = await this.get(modelItem._id || modelItem.id);
@@ -208,7 +208,7 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     let model = { ...modelItem };
-    model = await this.onUpdateRequest(request, model);
+    model = await this.onUpdateRequest(model, request);
 
     // remove version number
     delete model.__v;
@@ -229,7 +229,7 @@ export abstract class CrudService<IModel extends Document> {
     ...args: any
   ): Promise<IModel> {
     let model = { ...modelItem };
-    model = (await this.onUpdateRequest(request, model)) as IModel;
+    model = (await this.onUpdateRequest(model, request)) as IModel;
 
     // remove version number
     delete model.__v;
@@ -254,7 +254,7 @@ export abstract class CrudService<IModel extends Document> {
       return null;
     }
 
-    await this.onDeleteRequest(request, model);
+    await this.onDeleteRequest(model, request);
 
     return this.crudModel.findByIdAndRemove(id).exec();
   }
@@ -340,9 +340,9 @@ export abstract class CrudService<IModel extends Document> {
    * @param model the model which is to be created
    */
   public async onCreateRequest(
-    model: IModel,
+    model: Omit<IModel, keyof Document>,
     request?: INURequest | any
-  ): Promise<IModel> {
+  ): Promise<Omit<IModel, keyof Document>> {
     return model;
   }
 
