@@ -196,7 +196,10 @@ export abstract class CrudController<IModel extends Document> {
         const keyConditions: IMongoConditions[] = [];
         const value = conditionPair[key];
 
-        if (this.crudService.getFieldType(key) === "String") {
+        if (
+          this.crudService.getFieldType(key) === "String" &&
+          !(value + "").endsWith("\\")
+        ) {
           keyConditions.push({ [key]: { $regex: value, $options: "i" } });
         }
 

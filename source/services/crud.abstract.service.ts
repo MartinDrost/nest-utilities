@@ -616,7 +616,9 @@ export abstract class CrudService<IModel extends Document> {
         case "ObjectId":
           return require("bson-objectid")(value);
         case "Boolean":
-          return [true, 1, "true", "1"].includes(value);
+          if ([true, false, 1, 0, "true", "false", "1", "0"].includes(value))
+            return [true, 1, "true", "1"].includes(value);
+          else return value;
         default:
           return value;
       }
