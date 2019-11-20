@@ -15,7 +15,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response: Response = host.switchToHttp().getResponse();
 
     let httpException: HttpException = exception;
-    if (httpException instanceof HttpException === false) {
+    if (!httpException.getStatus) {
       httpException = new InternalServerErrorException(
         this.showStackTrace ? exception.stack : exception.message
       );
