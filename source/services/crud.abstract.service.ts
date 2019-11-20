@@ -103,7 +103,7 @@ export abstract class CrudService<IModel extends Document> {
       })
     );
 
-    return this.crudModel.countDocuments(conditions);
+    return this.crudModel.collection.countDocuments(conditions);
   }
 
   /**
@@ -127,7 +127,7 @@ export abstract class CrudService<IModel extends Document> {
         .switchToHttp()
         .getResponse<Response>();
 
-      const numberOfDocuments = await this.crudModel.countDocuments(conditions);
+      const numberOfDocuments = await this.countDocuments(conditions);
 
       response.header("X-total-count", numberOfDocuments.toString());
       response.header("Access-Control-Expose-Headers", [
@@ -190,7 +190,7 @@ export abstract class CrudService<IModel extends Document> {
     mongoRequest: IMongoRequest = {},
     ...args: any[]
   ): Promise<IModel[]> {
-    return this.find({ _id: ids }, mongoRequest);
+    return this.find({ _id: { $in: ids } }, mongoRequest);
   }
 
   /**
@@ -322,8 +322,15 @@ export abstract class CrudService<IModel extends Document> {
    * Populate a list of retrieved models
    * @param models
    */
-  public populateList(models: IModel[]): Promise<IModel[]> {
-    return Promise.all(models.map(model => this.populate(model)));
+  public populateList(
+    models: IModel[],
+    paths: string[] = [],
+    picks: string[] = [],
+    request?: INURequest | any
+  ): Promise<IModel[]> {
+    return Promise.all(
+      models.map(model => this.populate(model, paths, picks, request))
+    );
   }
 
   /**
@@ -531,9 +538,23 @@ export abstract class CrudService<IModel extends Document> {
       // cast the value if a type is found
       const type = this.getFieldType(key);
       if (type) {
-        conditions[key] = Array.isArray(value)
-          ? value.map(v => this.castValue(v, type))
-          : this.castValue(value, type);
+        // take sub-objects into account like $in
+        if (typeof value === "object" && !Array.isArray(value)) {
+          Object.keys(value).forEach(subKey => {
+            if (!subKey.startsWith("$")) {
+              return;
+            }
+
+            const subValue = value[subKey];
+            conditions[key][subKey] = Array.isArray(subValue)
+              ? subValue.map(v => this.castValue(v, type))
+              : this.castValue(subValue, type);
+          });
+        } else {
+          conditions[key] = Array.isArray(value)
+            ? value.map(v => this.castValue(v, type))
+            : this.castValue(value, type);
+        }
       }
     });
 
@@ -576,6 +597,10 @@ export abstract class CrudService<IModel extends Document> {
    * @param type
    */
   private castValue(value: any, type: string): any {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
     if (Array.isArray(value) || typeof value === "object") {
       return value;
     }
