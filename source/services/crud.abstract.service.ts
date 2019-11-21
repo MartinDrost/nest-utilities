@@ -5,7 +5,7 @@ import _mergeWith from "lodash/mergeWith";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
 import { IMongoConditions, INURequest } from "../interfaces";
 import { IMongoRequest } from "../interfaces/mongoRequest.interface";
-import { isObjectID } from "../utilities";
+import { getDeepKeys, isObjectID } from "../utilities";
 
 export abstract class CrudService<IModel extends Document> {
   private static serviceMap: { [modelName: string]: CrudService<any> } = {};
@@ -136,6 +136,20 @@ export abstract class CrudService<IModel extends Document> {
       ]);
     }
 
+    const models = await this.getResponse(conditions, mongoRequest);
+
+    return Promise.all(models);
+  }
+
+  /**
+   * Returns the response of the given conditions
+   * @param conditions
+   * @param mongoRequest
+   */
+  private async getResponse(
+    conditions: IMongoConditions,
+    mongoRequest: IMongoRequest
+  ): Promise<Promise<IModel>[]> {
     // get field selection
     const projection = {};
     mongoRequest.options?.select
@@ -161,24 +175,53 @@ export abstract class CrudService<IModel extends Document> {
     );
 
     // execute a find query avoiding Mongoose
-    const response = await this.crudModel.collection
-      .find<IModel>(conditions, {
-        skip: mongoRequest.options?.skip,
-        limit: mongoRequest.options?.limit,
-        sort,
-        projection
-      })
-      .toArray();
+    let response: IModel[] = [];
+    const keys = getDeepKeys(conditions)
+      .map(key =>
+        key
+          .split(".")
+          .filter(field => !field.includes("$"))
+          .join(".")
+      )
+      .filter(key => key.includes("."));
+
+    if (!keys.length) {
+      // if no deep keys have been found, execute a normal find query
+      response = await this.crudModel.collection
+        .find<IModel>(conditions, {
+          skip: mongoRequest.options?.skip,
+          limit: mongoRequest.options?.limit,
+          sort,
+          projection
+        })
+        .toArray();
+    } else {
+      // aggregate targeted virtual otherwise
+      const pipeline = this.getLookupPipeline(keys);
+      pipeline.push({ $match: conditions });
+      if (mongoRequest.options?.skip) {
+        pipeline.push({ $skip: mongoRequest.options?.skip });
+      }
+      if (mongoRequest.options?.limit) {
+        pipeline.push({ $limit: mongoRequest.options?.limit });
+      }
+      if (Object.keys(sort).length) {
+        pipeline.push({ $sort: sort });
+      }
+      if (Object.keys(projection).length) {
+        pipeline.push({ $project: projection });
+      }
+
+      response = await this.crudModel.collection.aggregate(pipeline).toArray();
+    }
 
     // hydrate and populate the response
-    const models = response.map(model =>
+    return response.map(model =>
       this.crudModel
         .hydrate(model)
         .populate(populateOptions)
         .execPopulate()
     );
-
-    return Promise.all(models);
   }
 
   /**
@@ -625,5 +668,52 @@ export abstract class CrudService<IModel extends Document> {
     } catch {
       return value;
     }
+  }
+
+  /**
+   * Builds and returns a lookup pipeline to aggregate virtuals
+   * @param keys
+   */
+  private getLookupPipeline(keys: string[]): IMongoConditions[] {
+    const pipeline: IMongoConditions[] = [];
+    for (const key of keys) {
+      const path = key.split(".").filter(field => !field.includes("$")); // filter $in, $or etc.
+      path.pop(); // remove the last step since it points to the field
+
+      let service: CrudService<any> = this;
+      const journey: string[] = [];
+      for (const field of path) {
+        const virtual = (service.crudModel.schema as any).virtuals[field];
+        if (!virtual.options || !virtual.options.justOne) {
+          break;
+        }
+
+        // move to the next service
+        service = CrudService.serviceMap[virtual.options.ref];
+
+        // map journey
+        journey.push(field);
+
+        // add the lookup
+        pipeline.push({
+          $lookup: {
+            from: service.crudModel.collection.collectionName,
+            localField: virtual.options.localField,
+            foreignField: virtual.options.foreignField,
+            as: journey.join(".")
+          }
+        });
+
+        // add the unwind
+        pipeline.push({
+          $unwind: {
+            path: `$${journey.join(".")}`,
+            preserveNullAndEmptyArrays: true
+          }
+        });
+      }
+    }
+
+    return pipeline;
   }
 }

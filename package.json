@@ -1,6 +1,6 @@
 {
   "name": "nest-utilities",
-  "version": "7.1.62",
+  "version": "7.1.70",
   "description": "Supplements NestJS applications with out of the box CRUD functionality and parameter actions.",
   "main": "distribution/index.js",
   "scripts": {
