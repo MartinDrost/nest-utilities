@@ -684,7 +684,7 @@ export abstract class CrudService<IModel extends Document> {
       const journey: string[] = [];
       for (const field of path) {
         const virtual = (service.crudModel.schema as any).virtuals[field];
-        if (!virtual.options || !virtual.options.justOne) {
+        if (!virtual?.options?.justOne) {
           break;
         }
 
