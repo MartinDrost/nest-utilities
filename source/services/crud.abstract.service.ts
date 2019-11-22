@@ -94,7 +94,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async countDocuments(
     conditions: IMongoConditions<IModel> = {},
-    mongoRequest: Pick<IMongoRequest, "request" | "filters"> = {}
+    mongoRequest: IMongoRequest = {}
   ): Promise<number> {
     // merge filters and conditions
     conditions = this.cast(
@@ -103,7 +103,22 @@ export abstract class CrudService<IModel extends Document> {
       })
     );
 
-    return this.crudModel.collection.countDocuments(conditions);
+    const response = await this.getMongoResponse(
+      conditions,
+      {
+        options: {
+          distinct: mongoRequest.options?.distinct
+        }
+      },
+      [
+        {
+          $count: "count"
+        },
+        { $limit: 1 }
+      ]
+    );
+
+    return response[0]?.count || 0;
   }
 
   /**
@@ -127,7 +142,10 @@ export abstract class CrudService<IModel extends Document> {
         .switchToHttp()
         .getResponse<Response>();
 
-      const numberOfDocuments = await this.countDocuments(conditions);
+      const numberOfDocuments = await this.countDocuments(
+        conditions,
+        mongoRequest
+      );
 
       response.header("X-total-count", numberOfDocuments.toString());
       response.header("Access-Control-Expose-Headers", [
@@ -139,96 +157,6 @@ export abstract class CrudService<IModel extends Document> {
     const models = await this.getResponse(conditions, mongoRequest);
 
     return Promise.all(models);
-  }
-
-  /**
-   * Returns the response of the given conditions
-   * @param conditions
-   * @param mongoRequest
-   */
-  private async getResponse(
-    conditions: IMongoConditions,
-    mongoRequest: IMongoRequest
-  ): Promise<Promise<IModel>[]> {
-    // get field selection
-    const projection = {};
-    mongoRequest.options?.select
-      ?.filter(field => !field.includes("."))
-      .forEach(field => (projection[field] = 1));
-
-    // get field sorting
-    const sort = {};
-    mongoRequest.options?.sort?.forEach(field => {
-      const desc = field.startsWith("-");
-      const cleanField = desc ? field.replace("-", "") : field;
-      sort[cleanField] = desc ? -1 : 1;
-    });
-
-    // build population params
-    if (mongoRequest.populate?.length === 0) {
-      mongoRequest.populate = this.getReferenceVirtuals();
-    }
-    const populateOptions = await this.getPopulateParams(
-      mongoRequest.populate || [],
-      Object.keys(projection),
-      mongoRequest.request
-    );
-
-    // execute an aggregate query
-    const keys = getDeepKeys(conditions)
-      .map(key =>
-        key
-          .split(".")
-          .filter(field => !field.includes("$"))
-          .join(".")
-      )
-      .filter(key => key.includes("."));
-
-    // aggregate targeted virtuals
-    const pipeline = this.getLookupPipeline(keys);
-    pipeline.push({ $match: conditions });
-    if (Object.keys(sort).length) {
-      pipeline.push({ $sort: sort });
-    }
-
-    // add distinct grouping
-    if (mongoRequest.options?.distinct) {
-      pipeline.push({
-        $group: {
-          _id: `$${mongoRequest.options.distinct}`
-        }
-      });
-      pipeline.push({
-        $group: {
-          _id: 1,
-          count: {
-            $sum: 1
-          }
-        }
-      });
-    }
-
-    if (mongoRequest.options?.skip) {
-      pipeline.push({ $skip: mongoRequest.options?.skip });
-    }
-    if (mongoRequest.options?.limit) {
-      pipeline.push({ $limit: mongoRequest.options?.limit });
-    }
-    if (Object.keys(projection).length) {
-      pipeline.push({ $project: projection });
-    }
-
-    const response = await this.crudModel.collection
-      .aggregate(pipeline)
-      .toArray();
-
-    // hydrate and populate the response
-    return response.map(model =>
-      this.crudModel
-        .hydrate(model)
-        .populate(populateOptions)
-        .execPopulate()
-    );
   }
 
   /**
@@ -622,7 +550,21 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     let object = this.getSchema();
+    let service: CrudService<any> = this;
     path.split(".").forEach(key => {
+      // first check if the field is a reference
+      const virtual = (service.crudModel.schema as any).virtuals[key];
+      if (virtual?.options?.ref) {
+        // move to the next service
+        service = CrudService.serviceMap[virtual.options.ref];
+        const schema = service?.getSchema();
+        if (schema) {
+          object = schema;
+        }
+        return;
+      }
+
+      // check for the field inside the schema otherwise
       if (!object) {
         return;
       }
@@ -722,5 +664,110 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     return pipeline;
+  }
+
+  /**
+   * Returns dehydrated mongo response based on the generated and given pipeline
+   * @param conditions
+   * @param mongoRequest
+   * @param extraPipelines
+   */
+  private getMongoResponse(
+    conditions: IMongoConditions,
+    mongoRequest: IMongoRequest,
+    extraPipelines: IMongoConditions[] = []
+  ) {
+    // get field selection
+    const projection = {};
+    mongoRequest.options?.select
+      ?.filter(field => !field.includes("."))
+      .forEach(field => (projection[field] = 1));
+
+    // get field sorting
+    const sort = {};
+    mongoRequest.options?.sort?.forEach(field => {
+      const desc = field.startsWith("-");
+      const cleanField = desc ? field.replace("-", "") : field;
+      sort[cleanField] = desc ? -1 : 1;
+    });
+
+    // execute an aggregate query
+    const keys = getDeepKeys(conditions)
+      .map(key =>
+        key
+          .split(".")
+          .filter(field => !field.includes("$"))
+          .join(".")
+      )
+      .filter(key => key.includes("."));
+
+    // aggregate targeted virtuals
+    const pipeline = this.getLookupPipeline(keys);
+    pipeline.push({ $match: conditions });
+
+    // add distinct grouping
+    if (mongoRequest.options?.distinct) {
+      pipeline.push({
+        $group: {
+          _id: `$${mongoRequest.options.distinct}`,
+          doc: { $first: "$$ROOT" }
+        }
+      });
+      pipeline.push({ $replaceRoot: { newRoot: "$doc" } });
+    }
+
+    // add options
+    if (Object.keys(sort).length) {
+      pipeline.push({ $sort: sort });
+    }
+    if (mongoRequest.options?.skip) {
+      pipeline.push({ $skip: mongoRequest.options?.skip });
+    }
+    if (mongoRequest.options?.limit) {
+      pipeline.push({ $limit: mongoRequest.options?.limit });
+    }
+    if (Object.keys(projection).length) {
+      pipeline.push({ $project: projection });
+    }
+
+    return this.crudModel.collection
+      .aggregate(pipeline.concat(extraPipelines))
+      .toArray();
+  }
+
+  /**
+   * Returns the response of the given conditions
+   * @param conditions
+   * @param mongoRequest
+   */
+  private async getResponse(
+    conditions: IMongoConditions,
+    mongoRequest: IMongoRequest
+  ): Promise<Promise<IModel>[]> {
+    // get field selection
+    const projection = {};
+    mongoRequest.options?.select
+      ?.filter(field => !field.includes("."))
+      .forEach(field => (projection[field] = 1));
+
+    // build population params
+    if (mongoRequest.populate?.length === 0) {
+      mongoRequest.populate = this.getReferenceVirtuals();
+    }
+    const populateOptions = await this.getPopulateParams(
+      mongoRequest.populate || [],
+      Object.keys(projection),
+      mongoRequest.request
+    );
+
+    const cursors = await this.getMongoResponse(conditions, mongoRequest);
+
+    // hydrate and populate the response
+    return cursors.map(model =>
+      this.crudModel
+        .hydrate(model)
+        .populate(populateOptions)
+        .execPopulate()
+    );
   }
 }
