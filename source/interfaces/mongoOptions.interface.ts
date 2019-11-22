@@ -3,4 +3,5 @@ export interface IMongoOptions {
   skip?: number;
   limit?: number;
   select?: string[];
+  distinct?: string;
 }

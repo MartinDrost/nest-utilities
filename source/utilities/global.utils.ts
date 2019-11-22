@@ -29,7 +29,7 @@ export const getDeepKeys = (
   stack: string[] = [],
   path: string[] = []
 ) => {
-  if (typeof object === "object" && !Array.isArray(object)) {
+  if (object && typeof object === "object" && !Array.isArray(object)) {
     for (const key of Object.keys(object)) {
       // skip empty keys caused by keys ending with '.'
       if (!key) {

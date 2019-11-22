@@ -174,8 +174,7 @@ export abstract class CrudService<IModel extends Document> {
       mongoRequest.request
     );
 
-    // execute a find query avoiding Mongoose
-    let response: IModel[] = [];
+    // execute an aggregate query
     const keys = getDeepKeys(conditions)
       .map(key =>
         key
@@ -185,35 +184,43 @@ export abstract class CrudService<IModel extends Document> {
       )
       .filter(key => key.includes("."));
 
-    if (!keys.length) {
-      // if no deep keys have been found, execute a normal find query
-      response = await this.crudModel.collection
-        .find<IModel>(conditions, {
-          skip: mongoRequest.options?.skip,
-          limit: mongoRequest.options?.limit,
-          sort,
-          projection
-        })
-        .toArray();
-    } else {
-      // aggregate targeted virtual otherwise
-      const pipeline = this.getLookupPipeline(keys);
-      pipeline.push({ $match: conditions });
-      if (mongoRequest.options?.skip) {
-        pipeline.push({ $skip: mongoRequest.options?.skip });
-      }
-      if (mongoRequest.options?.limit) {
-        pipeline.push({ $limit: mongoRequest.options?.limit });
-      }
-      if (Object.keys(sort).length) {
-        pipeline.push({ $sort: sort });
-      }
-      if (Object.keys(projection).length) {
-        pipeline.push({ $project: projection });
-      }
-
-      response = await this.crudModel.collection.aggregate(pipeline).toArray();
+    // aggregate targeted virtuals
+    const pipeline = this.getLookupPipeline(keys);
+    pipeline.push({ $match: conditions });
+    if (Object.keys(sort).length) {
+      pipeline.push({ $sort: sort });
     }
+
+    // add distinct grouping
+    if (mongoRequest.options?.distinct) {
+      pipeline.push({
+        $group: {
+          _id: `$${mongoRequest.options.distinct}`
+        }
+      });
+      pipeline.push({
+        $group: {
+          _id: 1,
+          count: {
+            $sum: 1
+          }
+        }
+      });
+    }
+
+    if (mongoRequest.options?.skip) {
+      pipeline.push({ $skip: mongoRequest.options?.skip });
+    }
+    if (mongoRequest.options?.limit) {
+      pipeline.push({ $limit: mongoRequest.options?.limit });
+    }
+    if (Object.keys(projection).length) {
+      pipeline.push({ $project: projection });
+    }
+
+    const response = await this.crudModel.collection
+      .aggregate(pipeline)
+      .toArray();
 
     // hydrate and populate the response
     return response.map(model =>

@@ -7,4 +7,5 @@ export interface IHttpOptions {
   search?: string;
   searchScope?: string;
   populate?: string;
+  distinct?: string;
 }

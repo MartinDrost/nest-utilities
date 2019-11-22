@@ -3,7 +3,8 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  InternalServerErrorException
+  InternalServerErrorException,
+  Logger
 } from "@nestjs/common";
 import { Response } from "express";
 
@@ -19,6 +20,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       httpException = new InternalServerErrorException(
         this.showStackTrace ? exception.stack : exception.message
       );
+    }
+
+    // log the message
+    if (httpException.getStatus() === 500) {
+      Logger.warn(httpException.message);
     }
 
     response.status(httpException.getStatus()).json(httpException.message);

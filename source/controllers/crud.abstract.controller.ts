@@ -243,6 +243,10 @@ export abstract class CrudController<IModel extends Document> {
       options.select = query.pick.split(",");
     }
 
+    if (query.distinct !== undefined) {
+      options.distinct = query.distinct;
+    }
+
     return options;
   }
 
