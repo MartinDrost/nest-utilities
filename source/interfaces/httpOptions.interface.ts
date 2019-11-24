@@ -8,4 +8,5 @@ export interface IHttpOptions {
   searchScope?: string;
   populate?: string;
   distinct?: string;
+  random?: string;
 }

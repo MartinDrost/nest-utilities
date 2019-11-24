@@ -672,7 +672,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param mongoRequest
    * @param extraPipelines
    */
-  private getMongoResponse(
+  private async getMongoResponse(
     conditions: IMongoConditions,
     mongoRequest: IMongoRequest,
     extraPipelines: IMongoConditions[] = []
@@ -717,9 +717,17 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     // add options
-    if (Object.keys(sort).length) {
+    if (!mongoRequest.options?.random && Object.keys(sort).length) {
       pipeline.push({ $sort: sort });
     }
+
+    if (mongoRequest.options?.random) {
+      const size =
+        mongoRequest.options.limit ?? (await this.countDocuments(conditions));
+
+      pipeline.push({ $sample: { size } });
+    }
+
     if (mongoRequest.options?.skip) {
       pipeline.push({ $skip: mongoRequest.options?.skip });
     }

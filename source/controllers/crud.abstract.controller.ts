@@ -229,6 +229,7 @@ export abstract class CrudController<IModel extends Document> {
   private queryToOptions(query: IHttpOptions): IMongoOptions {
     const options: IMongoOptions = {
       sort: [],
+      random: false,
       limit: query.limit ? +query.limit : undefined,
       skip: query.offset ? +query.offset : undefined,
       select: []
@@ -238,6 +239,9 @@ export abstract class CrudController<IModel extends Document> {
     if (query.sort !== undefined) {
       options.sort = query.sort.split(",");
     }
+
+    // sort randomly if its defined as anything but false
+    options.random = !["false", undefined].includes(query.random);
 
     if (query.pick !== undefined) {
       options.select = query.pick.split(",");
