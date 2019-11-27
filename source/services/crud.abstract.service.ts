@@ -692,14 +692,19 @@ export abstract class CrudService<IModel extends Document> {
     });
 
     // execute an aggregate query
-    const keys = getDeepKeys(conditions)
-      .map(key =>
-        key
-          .split(".")
-          .filter(field => !field.includes("$"))
-          .join(".")
+    const keys = Array.from(
+      new Set(
+        getDeepKeys(conditions)
+          .map(key =>
+            key
+              .split(".")
+              .filter(field => !field.includes("$"))
+              .join(".")
+          )
+          .concat(Object.keys(sort))
+          .filter(key => key.includes("."))
       )
-      .filter(key => key.includes("."));
+    );
 
     // aggregate targeted virtuals
     const pipeline = this.getLookupPipeline(keys);
