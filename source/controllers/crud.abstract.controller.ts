@@ -16,11 +16,10 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Document } from "mongoose";
-import { ICrudPermission, IHttpOptions, INURequest } from "../interfaces";
+import { ICrudPermission, IHttpOptions, INuRequest } from "../interfaces";
 import { ICrudPermissions } from "../interfaces/crudPermissions.interface";
 import { IMongoConditions } from "../interfaces/mongoConditions.interface";
-import { IMongoOptions } from "../interfaces/mongoOptions.interface";
-import { IMongoRequest } from "../interfaces/mongoRequest.interface";
+import { INuOptions } from "../interfaces/nuOptions.interface";
 import { CrudService } from "../services/crud.abstract.service";
 
 export abstract class CrudController<IModel extends Document> {
@@ -31,7 +30,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Post()
   create(
-    @Req() request: INURequest,
+    @Req() request: INuRequest,
     @Body() model: IModel,
     ...args: any[]
   ): Promise<IModel> {
@@ -42,26 +41,26 @@ export abstract class CrudController<IModel extends Document> {
 
   @Get()
   getAll(
-    @Req() request: INURequest,
-    @Query() query: IHttpOptions,
+    @Req() request: INuRequest,
+    @Query() query: IHttpOptions | any,
     ...args: any[]
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    const params = this.toMongooseParams(query);
+    const params = this.queryToOptions(query);
     return this.crudService.find({}, { request, ...params });
   }
 
   @Get(":id")
   async get(
-    @Req() request: INURequest,
+    @Req() request: INuRequest,
     @Param("id") id: string,
-    @Query() query: IHttpOptions,
+    @Query() query: IHttpOptions | any,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    const params = this.toMongooseParams(query);
+    const params = this.queryToOptions(query);
     const model = await this.crudService.get(id, { request, ...params });
 
     if (model === null) {
@@ -73,20 +72,20 @@ export abstract class CrudController<IModel extends Document> {
 
   @Get("many/:ids")
   getMany(
-    @Req() request: INURequest,
+    @Req() request: INuRequest,
     @Param("ids") ids: string,
-    @Query() query: IHttpOptions,
+    @Query() query: IHttpOptions | any,
     ...args: any[]
   ): Promise<IModel[]> {
     this.checkPermissions(this.permissions.read, request.context);
 
-    const params = this.toMongooseParams(query);
+    const params = this.queryToOptions(query);
     return this.crudService.getMany(ids.split(","), { request, ...params });
   }
 
   @Put(":id?")
   put(
-    @Req() request: INURequest,
+    @Req() request: INuRequest,
     @Body() model: IModel,
     @Param("id") id?: string,
     ...args: any[]
@@ -101,7 +100,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Patch(":id?")
   patch(
-    @Req() request: INURequest,
+    @Req() request: INuRequest,
     @Body() model: IModel,
     @Param("id") id?: string,
     ...args: any[]
@@ -116,7 +115,7 @@ export abstract class CrudController<IModel extends Document> {
 
   @Delete(":id")
   delete(
-    @Req() request: INURequest,
+    @Req() request: INuRequest,
     @Param("id") id: string,
     ...args: any[]
   ): Promise<IModel | null> {
@@ -155,18 +154,6 @@ export abstract class CrudController<IModel extends Document> {
         );
       }
     }
-  }
-
-  /**
-   * Converts http query params to Mongoose query Params
-   * @param query
-   */
-  protected toMongooseParams(query: IHttpOptions): IMongoRequest {
-    return {
-      filters: this.queryToConditions(query),
-      options: this.queryToOptions(query),
-      populate: this.queryToPopulate(query)
-    };
   }
 
   /**
@@ -226,8 +213,10 @@ export abstract class CrudController<IModel extends Document> {
    * Converts http query params to Mongoose options
    * @param query
    */
-  private queryToOptions(query: IHttpOptions): IMongoOptions {
-    const options: IMongoOptions = {
+  private queryToOptions(query: IHttpOptions): INuOptions {
+    const options: INuOptions = {
+      filters: this.queryToConditions(query),
+      populate: this.queryToPopulate(query),
       sort: [],
       random: false,
       limit: query.limit ? +query.limit : undefined,

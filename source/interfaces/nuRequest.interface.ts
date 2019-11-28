@@ -1,6 +1,6 @@
 import { ExecutionContext } from "@nestjs/common";
 import { Request } from "express";
 
-export interface INURequest extends Request {
+export interface INuRequest extends Request {
   context: ExecutionContext;
 }

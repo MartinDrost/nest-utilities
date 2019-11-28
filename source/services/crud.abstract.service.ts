@@ -3,8 +3,8 @@ import _isNil from "lodash/isNil";
 import _merge from "lodash/merge";
 import _mergeWith from "lodash/mergeWith";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
-import { IMongoConditions, INURequest } from "../interfaces";
-import { IMongoRequest } from "../interfaces/mongoRequest.interface";
+import { IMongoConditions, INuRequest } from "../interfaces";
+import { INuOptions } from "../interfaces/nuOptions.interface";
 import { getDeepKeys, isObjectID } from "../utilities";
 
 export abstract class CrudService<IModel extends Document> {
@@ -20,7 +20,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async create(
     modelItem: Omit<IModel, keyof Document>,
-    request?: INURequest | any,
+    request?: INuRequest | any,
     ...args: any[]
   ): Promise<IModel> {
     // make sure no leftover id exists
@@ -37,7 +37,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async createOrPatch(
     modelItem: IModel,
-    request?: INURequest | any,
+    request?: INuRequest | any,
     ...args: any[]
   ): Promise<IModel> {
     modelItem = (await this.onCreateRequest(modelItem, request)) as IModel;
@@ -58,27 +58,27 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async get(
     id: string,
-    mongoRequest: IMongoRequest = {},
+    options: INuOptions = {},
     ...args: any[]
   ): Promise<IModel | null> {
     if (isObjectID(id) === false) {
       return null;
     }
 
-    return this.findOne({ _id: id }, mongoRequest);
+    return this.findOne({ _id: id }, options);
   }
 
   /**
    * Find a single model
-   * @param mongoRequest
+   * @param options
    */
   public async findOne(
     conditions: IMongoConditions<IModel> = {},
-    mongoRequest: IMongoRequest = {}
+    options: INuOptions = {}
   ): Promise<IModel | null> {
-    mongoRequest.options = { ...mongoRequest.options, limit: 1 };
+    options.limit = 1;
 
-    const response = await this.find(conditions, mongoRequest);
+    const response = await this.find(conditions, options);
     if (response.length) {
       return response[0];
     }
@@ -90,25 +90,23 @@ export abstract class CrudService<IModel extends Document> {
    * Counts the number of documents which should be returned with the given conditions.
    * If defined, the onFindRequest conditions will also be appended
    * @param conditions
-   * @param mongoRequest
+   * @param options
    */
   public async countDocuments(
     conditions: IMongoConditions<IModel> = {},
-    mongoRequest: IMongoRequest = {}
+    options: INuOptions = {}
   ): Promise<number> {
     // merge filters and conditions
     conditions = this.cast(
-      _merge(conditions, mongoRequest.filters || {}, {
-        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+      _merge(conditions, options.filters || {}, {
+        $and: [{}, await this.onFindRequest(options.request)]
       })
     );
 
     const response = await this.getMongoResponse(
       conditions,
       {
-        options: {
-          distinct: mongoRequest.options?.distinct
-        }
+        distinct: options.distinct
       },
       [
         {
@@ -127,25 +125,22 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async find(
     conditions: IMongoConditions<IModel> = {},
-    mongoRequest: IMongoRequest = {}
+    options: INuOptions = {}
   ): Promise<IModel[]> {
     // merge filters and conditions
     conditions = this.cast(
-      _merge(conditions, mongoRequest.filters || {}, {
-        $and: [{}, ...(await this.onFindRequest(mongoRequest.request))]
+      _merge(conditions, options.filters || {}, {
+        $and: [{}, await this.onFindRequest(options.request)]
       })
     );
 
-    if (mongoRequest.request?.context) {
+    if (options.request?.context) {
       // store the amount of documents without limit in a response header
-      const response = mongoRequest.request.context
+      const response = options.request.context
         .switchToHttp()
         .getResponse<Response>();
 
-      const numberOfDocuments = await this.countDocuments(
-        conditions,
-        mongoRequest
-      );
+      const numberOfDocuments = await this.countDocuments(conditions, options);
 
       response.header("X-total-count", numberOfDocuments.toString());
       response.header("Access-Control-Expose-Headers", [
@@ -154,7 +149,7 @@ export abstract class CrudService<IModel extends Document> {
       ]);
     }
 
-    const models = await this.getResponse(conditions, mongoRequest);
+    const models = await this.getResponse(conditions, options);
 
     return Promise.all(models);
   }
@@ -165,10 +160,10 @@ export abstract class CrudService<IModel extends Document> {
    */
   public getMany(
     ids: string[],
-    mongoRequest: IMongoRequest = {},
+    options: INuOptions = {},
     ...args: any[]
   ): Promise<IModel[]> {
-    return this.find({ _id: { $in: ids } }, mongoRequest);
+    return this.find({ _id: { $in: ids } }, options);
   }
 
   /**
@@ -177,7 +172,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async patch(
     modelItem: Partial<IModel>,
-    request?: INURequest | any,
+    request?: INuRequest | any,
     ...args: any[]
   ): Promise<IModel> {
     const existing = await this.get(modelItem._id || modelItem.id || "");
@@ -203,7 +198,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async put(
     modelItem: IModel,
-    request?: INURequest | any,
+    request?: INuRequest | any,
     ...args: any
   ): Promise<IModel> {
     let model = { ...modelItem };
@@ -221,7 +216,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async delete(
     id: string,
-    request?: INURequest | any,
+    request?: INuRequest | any,
     ...args: any[]
   ): Promise<IModel | null> {
     if (isObjectID(id) === false) {
@@ -243,7 +238,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async findAndDelete(
     conditions: Partial<IModel>,
-    request?: INURequest | any,
+    request?: INuRequest | any,
     ...args: any[]
   ): Promise<(IModel | null)[]> {
     const found = await this.find(conditions);
@@ -277,7 +272,7 @@ export abstract class CrudService<IModel extends Document> {
     model: IModel,
     paths: string[] = [],
     picks: string[] = [],
-    request?: INURequest | any
+    request?: INuRequest | any
   ): Promise<IModel> {
     if (!model.populate) {
       if (!model._id && !model.id) {
@@ -304,7 +299,7 @@ export abstract class CrudService<IModel extends Document> {
     models: IModel[],
     paths: string[] = [],
     picks: string[] = [],
-    request?: INURequest | any
+    request?: INuRequest | any
   ): Promise<IModel[]> {
     return Promise.all(
       models.map(model => this.populate(model, paths, picks, request))
@@ -326,7 +321,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async onCreateRequest(
     model: Omit<IModel, keyof Document>,
-    request?: INURequest | any
+    request?: INuRequest | any
   ): Promise<Omit<IModel, keyof Document>> {
     return model;
   }
@@ -344,8 +339,8 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    */
   public async onFindRequest(
-    request?: INURequest | any
-  ): Promise<IMongoConditions<IModel>[]> {
+    request?: INuRequest | any
+  ): Promise<IMongoConditions<IModel>> {
     return [];
   }
 
@@ -364,7 +359,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async onUpdateRequest(
     model: Partial<IModel>,
-    request?: INURequest | any
+    request?: INuRequest | any
   ): Promise<Partial<IModel>> {
     return model;
   }
@@ -384,7 +379,7 @@ export abstract class CrudService<IModel extends Document> {
    */
   public async onDeleteRequest(
     model: IModel,
-    request?: INURequest | any
+    request?: INuRequest | any
   ): Promise<void> {}
 
   /**
@@ -395,7 +390,7 @@ export abstract class CrudService<IModel extends Document> {
   private async getPopulateParams(
     paths: string[],
     picks: string[] = [],
-    request?: INURequest | any
+    request?: INuRequest | any
   ): Promise<ModelPopulateOptions[]> {
     return (
       await Promise.all(
@@ -415,7 +410,7 @@ export abstract class CrudService<IModel extends Document> {
   private async deepPopulate(
     path: string,
     picks: string[],
-    request?: INURequest | any,
+    request?: INuRequest | any,
     journey: string[] = []
   ): Promise<ModelPopulateOptions | undefined> {
     if (!path) {
@@ -443,15 +438,11 @@ export abstract class CrudService<IModel extends Document> {
     return {
       path: currentPosition,
       select: selection.join(" ") || undefined,
-      match: {
-        $and: [
-          {},
-          ...(await this.getPopulateConditions(
-            [...journey, currentPosition].join("."),
-            request
-          ))
-        ]
-      },
+      match: await this.getPopulateConditions(
+        [...journey, currentPosition].join("."),
+        request
+      ),
+
       populate:
         (await this.deepPopulate(pathParts.join("."), picks, request, [
           ...journey,
@@ -467,8 +458,8 @@ export abstract class CrudService<IModel extends Document> {
    */
   private async getPopulateConditions(
     path: string,
-    request?: INURequest | any
-  ): Promise<IMongoConditions<IModel>[]> {
+    request?: INuRequest | any
+  ): Promise<IMongoConditions<IModel>> {
     // no request means no user to authorize
     if (!request) {
       return [];
@@ -669,23 +660,23 @@ export abstract class CrudService<IModel extends Document> {
   /**
    * Returns dehydrated mongo response based on the generated and given pipeline
    * @param conditions
-   * @param mongoRequest
+   * @param options
    * @param extraPipelines
    */
   private async getMongoResponse(
     conditions: IMongoConditions,
-    mongoRequest: IMongoRequest,
+    options: INuOptions,
     extraPipelines: IMongoConditions[] = []
   ) {
     // get field selection
     const projection = {};
-    mongoRequest.options?.select
+    options.select
       ?.filter(field => !field.includes("."))
       .forEach(field => (projection[field] = 1));
 
     // get field sorting
     const sort = {};
-    mongoRequest.options?.sort?.forEach(field => {
+    options.sort?.forEach(field => {
       const desc = field.startsWith("-");
       const cleanField = desc ? field.replace("-", "") : field;
       sort[cleanField] = desc ? -1 : 1;
@@ -711,10 +702,10 @@ export abstract class CrudService<IModel extends Document> {
     pipeline.push({ $match: conditions });
 
     // add distinct grouping
-    if (mongoRequest.options?.distinct) {
+    if (options.distinct) {
       pipeline.push({
         $group: {
-          _id: `$${mongoRequest.options.distinct}`,
+          _id: `$${options.distinct}`,
           doc: { $first: "$$ROOT" }
         }
       });
@@ -722,22 +713,21 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     // add options
-    if (!mongoRequest.options?.random && Object.keys(sort).length) {
+    if (!options.random && Object.keys(sort).length) {
       pipeline.push({ $sort: sort });
     }
 
-    if (mongoRequest.options?.random) {
-      const size =
-        mongoRequest.options.limit ?? (await this.countDocuments(conditions));
+    if (options.random) {
+      const size = options.limit ?? (await this.countDocuments(conditions));
 
       pipeline.push({ $sample: { size } });
     }
 
-    if (mongoRequest.options?.skip) {
-      pipeline.push({ $skip: mongoRequest.options?.skip });
+    if (options.skip) {
+      pipeline.push({ $skip: options.skip });
     }
-    if (mongoRequest.options?.limit) {
-      pipeline.push({ $limit: mongoRequest.options?.limit });
+    if (options.limit) {
+      pipeline.push({ $limit: options.limit });
     }
     if (Object.keys(projection).length) {
       pipeline.push({ $project: projection });
@@ -751,29 +741,29 @@ export abstract class CrudService<IModel extends Document> {
   /**
    * Returns the response of the given conditions
    * @param conditions
-   * @param mongoRequest
+   * @param options
    */
   private async getResponse(
     conditions: IMongoConditions,
-    mongoRequest: IMongoRequest
+    options: INuOptions
   ): Promise<Promise<IModel>[]> {
     // get field selection
     const projection = {};
-    mongoRequest.options?.select
+    options.select
       ?.filter(field => !field.includes("."))
       .forEach(field => (projection[field] = 1));
 
     // build population params
-    if (mongoRequest.populate?.length === 0) {
-      mongoRequest.populate = this.getReferenceVirtuals();
+    if (options.populate?.length === 0) {
+      options.populate = this.getReferenceVirtuals();
     }
     const populateOptions = await this.getPopulateParams(
-      mongoRequest.populate || [],
+      options.populate || [],
       Object.keys(projection),
-      mongoRequest.request
+      options.request
     );
 
-    const cursors = await this.getMongoResponse(conditions, mongoRequest);
+    const cursors = await this.getMongoResponse(conditions, options);
 
     // hydrate and populate the response
     return cursors.map(model =>
