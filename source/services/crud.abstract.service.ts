@@ -96,9 +96,9 @@ export abstract class CrudService<IModel extends Document> {
     conditions: IMongoConditions<IModel> = {},
     options: INuOptions = {}
   ): Promise<number> {
-    // merge filters and conditions
+    // merge filter and conditions
     conditions = this.cast(
-      _merge(conditions, options.filters || {}, {
+      _merge(conditions, options.filter || {}, {
         $and: [{}, await this.onFindRequest(options.request)]
       })
     );
@@ -127,9 +127,9 @@ export abstract class CrudService<IModel extends Document> {
     conditions: IMongoConditions<IModel> = {},
     options: INuOptions = {}
   ): Promise<IModel[]> {
-    // merge filters and conditions
+    // merge filter and conditions
     conditions = this.cast(
-      _merge(conditions, options.filters || {}, {
+      _merge(conditions, options.filter || {}, {
         $and: [{}, await this.onFindRequest(options.request)]
       })
     );

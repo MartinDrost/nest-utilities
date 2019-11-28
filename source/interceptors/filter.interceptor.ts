@@ -1,8 +1,8 @@
 import {
+  CallHandler,
   ExecutionContext,
   Injectable,
-  NestInterceptor,
-  CallHandler
+  NestInterceptor
 } from "@nestjs/common";
 import _get from "lodash/get";
 import { map } from "rxjs/operators";
@@ -38,7 +38,7 @@ export class FilterInterceptor implements NestInterceptor {
           // loop over the returned items
           for (let i = 0; i < value.length; i++) {
             const item = value[i];
-            // check if the item matches all provided filters
+            // check if the item matches all provided filter
             let valid = true;
             for (const filterKey of Object.keys(filter)) {
               const itemValue = _get(item, filterKey);

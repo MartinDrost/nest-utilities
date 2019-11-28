@@ -215,7 +215,7 @@ export abstract class CrudController<IModel extends Document> {
    */
   private queryToOptions(query: IHttpOptions): INuOptions {
     const options: INuOptions = {
-      filters: this.queryToConditions(query),
+      filter: this.queryToConditions(query),
       populate: this.queryToPopulate(query),
       sort: [],
       random: false,

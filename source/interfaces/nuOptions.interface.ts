@@ -10,6 +10,6 @@ export interface INuOptions {
   distinct?: string;
 
   request?: INuRequest;
-  filters?: IMongoConditions;
+  filter?: IMongoConditions;
   populate?: string[];
 }
