@@ -15,6 +15,7 @@ import {
   Req
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import _escapeRegExp from "lodash/escapeRegExp";
 import { Document } from "mongoose";
 import { ICrudPermission, IHttpOptions, INuRequest } from "../interfaces";
 import { ICrudPermissions } from "../interfaces/crudPermissions.interface";
@@ -181,20 +182,31 @@ export abstract class CrudController<IModel extends Document> {
       const conditions: IMongoConditions[] = [];
       Object.keys(conditionPair).forEach(key => {
         const keyConditions: IMongoConditions[] = [];
-        const value = conditionPair[key];
+        let value: string = conditionPair[key];
+        let validator = "$eq";
+        const notEqual = value.startsWith("!");
+        if (notEqual) {
+          value = value.replace("!", "");
+          validator = "$ne";
+        }
 
         if (
           this.crudService.getFieldType(key) === "String" &&
           !(value + "").endsWith("\\")
         ) {
-          keyConditions.push({ [key]: { $regex: value, $options: "i" } });
+          const regex = { $regex: _escapeRegExp(value), $options: "i" };
+          if (notEqual) {
+            keyConditions.push({ [key]: { $not: regex } });
+          } else {
+            keyConditions.push({ [key]: regex });
+          }
         }
 
         if (!isNaN(+value)) {
-          keyConditions.push({ [key]: +value });
+          keyConditions.push({ [key]: { [validator]: +value } });
         }
 
-        keyConditions.push({ [key]: value });
+        keyConditions.push({ [key]: { [validator]: value } });
 
         conditions.push({ $or: keyConditions });
       });
@@ -213,7 +225,7 @@ export abstract class CrudController<IModel extends Document> {
    * Converts http query params to Mongoose options
    * @param query
    */
-  private queryToOptions(query: IHttpOptions): INuOptions {
+  protected queryToOptions(query: IHttpOptions): INuOptions {
     const options: INuOptions = {
       filter: this.queryToConditions(query),
       populate: this.queryToPopulate(query),
