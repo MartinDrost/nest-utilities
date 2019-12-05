@@ -341,7 +341,7 @@ export abstract class CrudService<IModel extends Document> {
   public async onFindRequest(
     request?: INuRequest | any
   ): Promise<IMongoConditions<IModel>> {
-    return [];
+    return {};
   }
 
   /**
