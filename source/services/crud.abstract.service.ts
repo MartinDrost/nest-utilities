@@ -279,7 +279,7 @@ export abstract class CrudService<IModel extends Document> {
         return model;
       } else {
         return (await this.get(model._id || model._id, {
-          populate: []
+          populate: paths
         }))!;
       }
     }
@@ -462,7 +462,7 @@ export abstract class CrudService<IModel extends Document> {
   ): Promise<IMongoConditions<IModel>> {
     // no request means no user to authorize
     if (!request) {
-      return [];
+      return {};
     }
 
     // iterate through the path to find the correct service to populate
