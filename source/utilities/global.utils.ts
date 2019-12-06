@@ -1,5 +1,6 @@
 import { INestApplication } from "@nestjs/common";
 import { ObjectId } from "bson";
+import { ModelPopulateOptions, QueryPopulateOptions } from "mongoose";
 import { ContextInterceptor } from "../interceptors";
 
 /**
@@ -52,4 +53,46 @@ export const getDeepKeys = (
   }
 
   return stack;
+};
+
+export const mergePopulateOptions = (options: ModelPopulateOptions[]) => {
+  const merged: ModelPopulateOptions[] = [];
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i];
+    if (merged.find(mergedOption => mergedOption.path === option.path)) {
+      continue;
+    }
+
+    const matches = options
+      .slice(i + 1, options.length)
+      .filter(comparison => comparison.path === option.path);
+
+    // force the populate attribute to an array
+    if (Array.isArray(option.populate) === false) {
+      option.populate = option.populate
+        ? [option.populate as QueryPopulateOptions]
+        : [];
+    }
+
+    // move all populate attributes to the one held back
+    matches.forEach(match => {
+      option.populate = (option.populate as QueryPopulateOptions[]).concat(
+        match.populate
+          ? Array.isArray(match.populate)
+            ? match.populate
+            : [match.populate]
+          : []
+      );
+    });
+
+    // merge the children of the new option
+    if (option.populate) {
+      option.populate = mergePopulateOptions(
+        Array.isArray(option.populate) ? option.populate : [option.populate]
+      );
+    }
+
+    merged.push(option);
+  }
+  return merged;
 };

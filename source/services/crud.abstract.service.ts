@@ -5,7 +5,7 @@ import _mergeWith from "lodash/mergeWith";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
 import { IMongoConditions, INuRequest } from "../interfaces";
 import { INuOptions } from "../interfaces/nuOptions.interface";
-import { getDeepKeys, isObjectID } from "../utilities";
+import { getDeepKeys, isObjectID, mergePopulateOptions } from "../utilities";
 
 export abstract class CrudService<IModel extends Document> {
   private static serviceMap: { [modelName: string]: CrudService<any> } = {};
@@ -392,11 +392,13 @@ export abstract class CrudService<IModel extends Document> {
     picks: string[] = [],
     request?: INuRequest | any
   ): Promise<ModelPopulateOptions[]> {
-    return (
-      await Promise.all(
-        paths.map(path => this.deepPopulate(path, picks, request))
-      )
-    ).filter(param => param !== undefined) as ModelPopulateOptions[];
+    return mergePopulateOptions(
+      (
+        await Promise.all(
+          paths.map(path => this.deepPopulate(path, picks, request))
+        )
+      ).filter(param => param !== undefined) as ModelPopulateOptions[]
+    );
   }
 
   /**
