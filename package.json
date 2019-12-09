@@ -1,12 +1,13 @@
 {
   "name": "nest-utilities",
-  "version": "7.2.8",
+  "version": "7.2.9",
   "description": "Supplements NestJS applications with out of the box CRUD functionality and parameter actions.",
   "main": "distribution/index.js",
   "scripts": {
     "prepublishOnly": "npm run build",
     "test": "npm run build",
-    "build": "tsc"
+    "build": "npm run clean && tsc",
+    "clean": "rimraf distribution/*"
   },
   "dependencies": {
     "@nestjs/common": "6.4.1",
@@ -20,6 +21,7 @@
     "@types/express": "4.17.1",
     "@types/lodash": "4.14.144",
     "@types/mongoose": "5.5.21",
+    "rimraf": "^3.0.0",
     "tsconfig-paths": "3.1.1",
     "tslint": "5.20.0",
     "typescript": "3.7.2"
