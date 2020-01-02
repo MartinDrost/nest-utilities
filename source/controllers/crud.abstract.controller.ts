@@ -238,7 +238,7 @@ export abstract class CrudController<IModel extends Document> {
 
     // create sort options
     if (query.sort !== undefined) {
-      options.sort = query.sort.split(",");
+      options.sort = query.sort.split(",").filter(v => v);
     }
 
     // sort randomly if its defined as anything but false
