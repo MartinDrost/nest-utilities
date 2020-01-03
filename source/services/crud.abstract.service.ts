@@ -8,7 +8,16 @@ import { INuOptions } from "../interfaces/nuOptions.interface";
 import { getDeepKeys, isObjectID, mergePopulateOptions } from "../utilities";
 
 export abstract class CrudService<IModel extends Document> {
+  /**
+   * A static object keeping track of which service belongs to which schema
+   */
   private static serviceMap: { [modelName: string]: CrudService<any> } = {};
+
+  /**
+   * An array containing all fields which should not be taken into account
+   * when performing user generated queries.
+   */
+  protected fieldBlacklist: string[] = [];
 
   constructor(protected crudModel: Model<IModel>) {
     CrudService.serviceMap[crudModel.modelName] = this;
@@ -261,7 +270,14 @@ export abstract class CrudService<IModel extends Document> {
    * Returns the schema object of the services' model
    */
   public getSchema(): any {
-    return this.crudModel.schema.obj;
+    const schema = { ...this.crudModel.schema.obj };
+
+    // delete blacklisted fields
+    for (let i = 0; i < this.fieldBlacklist.length; i++) {
+      delete schema[this.fieldBlacklist[i]];
+    }
+
+    return schema;
   }
 
   /**
@@ -470,7 +486,7 @@ export abstract class CrudService<IModel extends Document> {
     // iterate through the path to find the correct service to populate
     let service: CrudService<IModel> = this;
     let haystack = {
-      ...service.crudModel.schema.obj,
+      ...service.getSchema(),
       ...(service.crudModel.schema as any).virtuals
     };
 
@@ -483,7 +499,7 @@ export abstract class CrudService<IModel extends Document> {
         if (ref) {
           service = CrudService.serviceMap[ref];
           haystack = {
-            ...service.crudModel.schema.obj,
+            ...service.getSchema(),
             ...(service.crudModel.schema as any).virtuals
           };
         }
