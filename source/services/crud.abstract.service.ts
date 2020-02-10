@@ -1,3 +1,4 @@
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Response } from "express";
 import _isNil from "lodash/isNil";
 import _merge from "lodash/merge";
@@ -258,6 +259,27 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * Throws an exception based on the availability of the model
+   * @param id
+   * @param request
+   */
+  async checkEligibility(id: string, request?: INuRequest) {
+    const company = await this.findOne({ _id: id });
+    if (!company) {
+      throw new NotFoundException(
+        `No ${this.crudModel.name} found with the provided id`
+      );
+    }
+
+    const eligibleCompany = await this.findOne({ _id: id }, { request });
+    if (!eligibleCompany) {
+      throw new ForbiddenException(
+        `You are not allowed to access that ${this.crudModel.name}`
+      );
+    }
+  }
+
+  /**
    * Returns an array with all referencing virtuals of the services' model
    */
   public getReferenceVirtuals(): string[] {
@@ -270,13 +292,12 @@ export abstract class CrudService<IModel extends Document> {
    * Returns the schema object of the services' model
    */
   public getSchema(): any {
-    const schema = { ...this.crudModel.schema.obj };
-
-    // delete blacklisted fields
-    for (let i = 0; i < this.fieldBlacklist.length; i++) {
-      delete schema[this.fieldBlacklist[i]];
+    const schema = {};
+    for (const key of Object.keys(this.crudModel.schema.obj)) {
+      if (!this.fieldBlacklist.includes(key)) {
+        schema[key] = this.crudModel.schema.obj[key];
+      }
     }
-
     return schema;
   }
 
