@@ -50,8 +50,6 @@ export abstract class CrudService<IModel extends Document> {
     request?: INuRequest | any,
     ...args: any[]
   ): Promise<IModel> {
-    modelItem = (await this.onCreateRequest(modelItem, request)) as IModel;
-
     if (modelItem._id || modelItem.id) {
       const existing = await this.get(modelItem._id || modelItem.id);
       if (existing !== null) {
@@ -190,7 +188,7 @@ export abstract class CrudService<IModel extends Document> {
       throw new Error("No model item found with the given id");
     }
 
-    let model = { ...modelItem };
+    let model = { ...(modelItem.toObject ? modelItem.toObject() : modelItem) };
     model = await this.onUpdateRequest(model, request);
 
     // remove version number
@@ -211,13 +209,20 @@ export abstract class CrudService<IModel extends Document> {
     request?: INuRequest | any,
     ...args: any
   ): Promise<IModel> {
-    let model = { ...modelItem };
-    model = (await this.onUpdateRequest(model, request)) as IModel;
+    modelItem._id = modelItem._id || modelItem.id;
+
+    let model = await this.get(modelItem._id || modelItem.id || "");
+    if (model === null) {
+      throw new Error("No model item found with the given id");
+    }
 
     // remove version number
-    delete model.__v;
+    delete modelItem.__v;
 
-    return this.crudModel.update({ _id: model._id || model.id }, model).exec();
+    modelItem = (await this.onUpdateRequest(modelItem, request)) as IModel;
+    await this.crudModel.replaceOne({ _id: model._id }, modelItem).exec();
+
+    return this.crudModel.findById(modelItem._id).exec() as Promise<IModel>;
   }
 
   /**
