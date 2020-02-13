@@ -543,9 +543,12 @@ export abstract class CrudService<IModel extends Document> {
     Object.keys(conditions).forEach(key => {
       const value = conditions[key];
       if (key.startsWith("$")) {
-        return (conditions[key] = Array.isArray(value)
-          ? value.map(item => this.cast(item))
-          : this.cast(value));
+        if (["$and", "$or", "$nor"].includes(key)) {
+          conditions[key] = Array.isArray(value)
+            ? value.map(item => this.cast(item))
+            : this.cast(value);
+        }
+        return;
       }
 
       // cast the value if a type is found
@@ -554,11 +557,11 @@ export abstract class CrudService<IModel extends Document> {
         // take sub-objects into account like $in
         if (typeof value === "object" && !Array.isArray(value)) {
           Object.keys(value).forEach(subKey => {
-            if (!subKey.startsWith("$")) {
+            const subValue = value[subKey];
+            if (!subKey.startsWith("$") || typeof subValue === "boolean") {
               return;
             }
 
-            const subValue = value[subKey];
             conditions[key][subKey] = Array.isArray(subValue)
               ? subValue.map(v => this.castValue(v, type))
               : this.castValue(subValue, type);
