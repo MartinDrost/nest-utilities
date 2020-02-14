@@ -185,7 +185,9 @@ export abstract class CrudService<IModel extends Document> {
   ): Promise<IModel> {
     const existing = await this.get(modelItem._id || modelItem.id || "");
     if (existing === null) {
-      throw new Error("No model item found with the given id");
+      throw new NotFoundException(
+        `No ${this.crudModel.name} found with the provided id`
+      );
     }
 
     let model = { ...(modelItem.toObject ? modelItem.toObject() : modelItem) };
@@ -213,7 +215,9 @@ export abstract class CrudService<IModel extends Document> {
 
     let model = await this.get(modelItem._id || modelItem.id || "");
     if (model === null) {
-      throw new Error("No model item found with the given id");
+      throw new NotFoundException(
+        `No ${this.crudModel.name} found with the provided id`
+      );
     }
 
     // remove version number
