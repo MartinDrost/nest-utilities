@@ -38,7 +38,8 @@ export abstract class CrudService<IModel extends Document> {
 
     let model = await this.onCreateRequest(modelItem, request);
 
-    return new this.crudModel(model).save();
+    const created = await new this.crudModel(model).save();
+    return this.onAfterCreateRequest(created, request);
   }
 
   /**
@@ -196,9 +197,11 @@ export abstract class CrudService<IModel extends Document> {
     // remove version number
     delete model.__v;
 
-    return _mergeWith(existing, model, (obj, src) =>
+    const updated = await _mergeWith(existing, model, (obj, src) =>
       !_isNil(src) ? src : obj
     ).save();
+
+    return this.onAfterUpdateRequest(updated, request);
   }
 
   /**
@@ -226,7 +229,8 @@ export abstract class CrudService<IModel extends Document> {
     modelItem = (await this.onUpdateRequest(modelItem, request)) as IModel;
     await this.crudModel.replaceOne({ _id: model._id }, modelItem).exec();
 
-    return this.crudModel.findById(modelItem._id).exec() as Promise<IModel>;
+    const updated = await this.crudModel.findById(modelItem._id).exec();
+    return this.onAfterUpdateRequest(updated!, request);
   }
 
   /**
@@ -248,7 +252,10 @@ export abstract class CrudService<IModel extends Document> {
 
     await this.onDeleteRequest(model, request);
 
-    return this.crudModel.findByIdAndRemove(id).exec();
+    const deleted = await this.crudModel.findByIdAndRemove(id).exec();
+    await this.onAfterDeleteRequest(deleted!, request);
+
+    return deleted;
   }
 
   /**
@@ -373,6 +380,25 @@ export abstract class CrudService<IModel extends Document> {
   }
 
   /**
+   * This method is called when a create request has been completed.
+   * The model returned from the method will be returned as the result of the create request.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param model the model which is to be created
+   */
+  public async onAfterCreateRequest(
+    model: IModel,
+    request?: INuRequest | any
+  ): Promise<IModel> {
+    return model;
+  }
+
+  /**
    * This method is called when a find or count request has been initiated.
    * The response should consist of an array of conditions which will be appended to the `$and` field of
    * the Mongoose query.
@@ -409,10 +435,28 @@ export abstract class CrudService<IModel extends Document> {
   ): Promise<Partial<IModel>> {
     return model;
   }
+  /**
+   * This method is called when an update request has been completed.
+   * The model returned will be used as the result of the update request.
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param model the new version of the model which is to be updated
+   */
+  public async onAfterUpdateRequest(
+    model: IModel,
+    request?: INuRequest | any
+  ): Promise<IModel> {
+    return model;
+  }
 
   /**
    * This method is called when a delete request has been initiated.
-   * The id of the model has been provided as param. This allows you to check if the user has the correct
+   * The requested model has been provided as param. This allows you to check if the user has the correct
    * rights and throw an error if the request may not be completed.
    *
    * The request originates from Express and ideally contains a user object
@@ -424,6 +468,23 @@ export abstract class CrudService<IModel extends Document> {
    * @param id the id of the model the request is trying to delete
    */
   public async onDeleteRequest(
+    model: IModel,
+    request?: INuRequest | any
+  ): Promise<void> {}
+
+  /**
+   * This method is called when a delete request has been completed.
+   * The requested model has been provided as param. This allows you to perform post-deletion actions
+   *
+   * The request originates from Express and ideally contains a user object
+   * to decide the right conditions.
+   *
+   * Override this method to use it.
+   *
+   * @param request the Express request originating from the controller
+   * @param id the id of the model the request is trying to delete
+   */
+  public async onAfterDeleteRequest(
     model: IModel,
     request?: INuRequest | any
   ): Promise<void> {}
