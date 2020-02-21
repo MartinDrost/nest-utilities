@@ -36,10 +36,10 @@ export abstract class CrudService<IModel extends Document> {
     // make sure no leftover id exists
     delete modelItem["_id"];
 
-    let model = await this.onCreateRequest(modelItem, request);
+    let model = await this.onCreate(modelItem, request);
 
     const created = await new this.crudModel(model).save();
-    return this.onAfterCreateRequest(created, request);
+    return this.onAfterCreate(created, request);
   }
 
   /**
@@ -108,7 +108,7 @@ export abstract class CrudService<IModel extends Document> {
     // merge filter and conditions
     conditions = this.cast(
       _merge(conditions, options.filter || {}, {
-        $and: [{}, await this.onFindRequest(options.request)]
+        $and: [{}, await this.onFind(options.request)]
       })
     );
 
@@ -139,7 +139,7 @@ export abstract class CrudService<IModel extends Document> {
     // merge filter and conditions
     conditions = this.cast(
       _merge(conditions, options.filter || {}, {
-        $and: [{}, await this.onFindRequest(options.request)]
+        $and: [{}, await this.onFind(options.request)]
       })
     );
 
@@ -192,7 +192,7 @@ export abstract class CrudService<IModel extends Document> {
     }
 
     let model = { ...(modelItem.toObject ? modelItem.toObject() : modelItem) };
-    model = await this.onUpdateRequest(model, request);
+    model = await this.onUpdate(model, request);
 
     // remove version number
     delete model.__v;
@@ -201,7 +201,7 @@ export abstract class CrudService<IModel extends Document> {
       !_isNil(src) ? src : obj
     ).save();
 
-    return this.onAfterUpdateRequest(updated, request);
+    return this.onAfterUpdate(updated, request);
   }
 
   /**
@@ -226,11 +226,11 @@ export abstract class CrudService<IModel extends Document> {
     // remove version number
     delete modelItem.__v;
 
-    modelItem = (await this.onUpdateRequest(modelItem, request)) as IModel;
+    modelItem = (await this.onUpdate(modelItem, request)) as IModel;
     await this.crudModel.replaceOne({ _id: model._id }, modelItem).exec();
 
     const updated = await this.crudModel.findById(modelItem._id).exec();
-    return this.onAfterUpdateRequest(updated!, request);
+    return this.onAfterUpdate(updated!, request);
   }
 
   /**
@@ -250,10 +250,10 @@ export abstract class CrudService<IModel extends Document> {
       return null;
     }
 
-    await this.onDeleteRequest(model, request);
+    await this.onDelete(model, request);
 
     const deleted = await this.crudModel.findByIdAndRemove(id).exec();
-    await this.onAfterDeleteRequest(deleted!, request);
+    await this.onAfterDelete(deleted!, request);
 
     return deleted;
   }
@@ -372,7 +372,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param model the model which is to be created
    */
-  public async onCreateRequest(
+  public async onCreate(
     model: Omit<IModel, keyof Document>,
     request?: INuRequest | any
   ): Promise<Omit<IModel, keyof Document>> {
@@ -391,7 +391,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param model the model which is to be created
    */
-  public async onAfterCreateRequest(
+  public async onAfterCreate(
     model: IModel,
     request?: INuRequest | any
   ): Promise<IModel> {
@@ -410,7 +410,7 @@ export abstract class CrudService<IModel extends Document> {
    *
    * @param request the Express request originating from the controller
    */
-  public async onFindRequest(
+  public async onFind(
     request?: INuRequest | any
   ): Promise<IMongoConditions<IModel>> {
     return {};
@@ -429,7 +429,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param model the new version of the model which is to be updated
    */
-  public async onUpdateRequest(
+  public async onUpdate(
     model: Partial<IModel>,
     request?: INuRequest | any
   ): Promise<Partial<IModel>> {
@@ -447,7 +447,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param model the new version of the model which is to be updated
    */
-  public async onAfterUpdateRequest(
+  public async onAfterUpdate(
     model: IModel,
     request?: INuRequest | any
   ): Promise<IModel> {
@@ -467,7 +467,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param id the id of the model the request is trying to delete
    */
-  public async onDeleteRequest(
+  public async onDelete(
     model: IModel,
     request?: INuRequest | any
   ): Promise<void> {}
@@ -484,7 +484,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param request the Express request originating from the controller
    * @param id the id of the model the request is trying to delete
    */
-  public async onAfterDeleteRequest(
+  public async onAfterDelete(
     model: IModel,
     request?: INuRequest | any
   ): Promise<void> {}
@@ -597,7 +597,7 @@ export abstract class CrudService<IModel extends Document> {
       }
     });
 
-    return service.onFindRequest(request);
+    return service.onFind(request);
   }
 
   /**
