@@ -1,6 +1,5 @@
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Response } from "express";
-import _isNil from "lodash/isNil";
 import _merge from "lodash/merge";
 import _mergeWith from "lodash/mergeWith";
 import { Document, Model, ModelPopulateOptions } from "mongoose";
@@ -35,6 +34,11 @@ export abstract class CrudService<IModel extends Document> {
   ): Promise<IModel> {
     // make sure no leftover id exists
     delete modelItem["_id"];
+    Object.keys(modelItem).forEach(key => {
+      if (modelItem[key] === "") {
+        modelItem[key] = null;
+      }
+    });
 
     let model = await this.onCreate(modelItem, request);
 
@@ -196,9 +200,14 @@ export abstract class CrudService<IModel extends Document> {
 
     // remove version number
     delete model.__v;
+    Object.keys(model).forEach(key => {
+      if (model[key] === "") {
+        model[key] = null;
+      }
+    });
 
     const updated = await _mergeWith(existing, model, (obj, src) =>
-      !_isNil(src) ? src : obj
+      src !== undefined ? src : obj
     ).save();
 
     return this.onAfterUpdate(updated, request);
@@ -225,6 +234,11 @@ export abstract class CrudService<IModel extends Document> {
 
     // remove version number
     delete modelItem.__v;
+    Object.keys(modelItem).forEach(key => {
+      if (modelItem[key] === "") {
+        modelItem[key] = null;
+      }
+    });
 
     modelItem = (await this.onUpdate(modelItem, request)) as IModel;
     await this.crudModel.replaceOne({ _id: model._id }, modelItem).exec();
