@@ -41,7 +41,6 @@ export abstract class CrudService<IModel extends Document> {
     });
 
     let model = await this.onCreate(modelItem, request);
-
     const created = await new this.crudModel(model).save();
     return this.onAfterCreate(created, request);
   }

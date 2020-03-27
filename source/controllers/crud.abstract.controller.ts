@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   CanActivate,
   Delete,
@@ -15,6 +16,9 @@ import {
   Req
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { plainToClass } from "class-transformer";
+import { ClassType } from "class-transformer/ClassTransformer";
+import { validate } from "class-validator";
 import _escapeRegExp from "lodash/escapeRegExp";
 import { Document } from "mongoose";
 import { ICrudPermission, IHttpOptions, INuRequest } from "../interfaces";
@@ -26,16 +30,18 @@ import { CrudService } from "../services/crud.abstract.service";
 export abstract class CrudController<IModel extends Document> {
   constructor(
     private crudService: CrudService<IModel>,
-    private permissions: ICrudPermissions = {}
+    private permissions: ICrudPermissions = {},
+    private crudDto?: ClassType<IModel>
   ) {}
 
   @Post()
-  create(
+  async create(
     @Req() request: INuRequest,
     @Body() model: IModel,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.create, request.context);
+    await this.validateModel(model);
 
     return this.crudService.create(model, request);
   }
@@ -85,13 +91,15 @@ export abstract class CrudController<IModel extends Document> {
   }
 
   @Put(":id?")
-  put(
+  async put(
     @Req() request: INuRequest,
     @Body() model: IModel,
     @Param("id") id?: string,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request.context);
+    await this.validateModel(model);
+
     if (id) {
       model._id = model.id = id;
     }
@@ -100,13 +108,15 @@ export abstract class CrudController<IModel extends Document> {
   }
 
   @Patch(":id?")
-  patch(
+  async patch(
     @Req() request: INuRequest,
     @Body() model: IModel,
     @Param("id") id?: string,
     ...args: any[]
   ): Promise<IModel> {
     this.checkPermissions(this.permissions.update, request.context);
+    await this.validateModel(model, true);
+
     if (id) {
       model._id = model.id = id;
     }
@@ -264,5 +274,36 @@ export abstract class CrudController<IModel extends Document> {
       return undefined;
     }
     return query.populate ? query.populate.split(",") : [];
+  }
+
+  /**
+   * Validates a model based on the set DTO
+   * @param model
+   * @param isPartial
+   */
+  public async validateModel(
+    model: IModel,
+    isPartial = false,
+    customDto?: ClassType<any>
+  ) {
+    if (!this.crudDto) {
+      return;
+    }
+
+    const errors = await validate(
+      plainToClass(customDto || this.crudDto, model),
+      {
+        skipUndefinedProperties: isPartial
+      }
+    );
+    if (errors.length) {
+      throw new BadRequestException({
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: errors
+          .map(error => Object.values(error.constraints))
+          .reduce((curr, prev) => prev.concat(curr), []),
+        error: "Bad Request"
+      });
+    }
   }
 }
