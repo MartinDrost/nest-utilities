@@ -31,7 +31,7 @@ export abstract class CrudController<IModel extends Document> {
   constructor(
     private crudService: CrudService<IModel>,
     private permissions: ICrudPermissions = {},
-    private crudDto?: ClassType<Omit<IModel, keyof Document>>
+    private crudDto?: ClassType<any>
   ) {}
 
   @Post()
