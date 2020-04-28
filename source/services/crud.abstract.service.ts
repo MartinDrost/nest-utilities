@@ -34,7 +34,7 @@ export abstract class CrudService<IModel extends Document> {
   ): Promise<IModel> {
     // make sure no leftover id exists
     delete modelItem["_id"];
-    Object.keys(modelItem).forEach(key => {
+    Object.keys(modelItem).forEach((key) => {
       if (modelItem[key] === "") {
         modelItem[key] = null;
       }
@@ -111,20 +111,20 @@ export abstract class CrudService<IModel extends Document> {
     // merge filter and conditions
     conditions = this.cast(
       _merge(conditions, options.filter || {}, {
-        $and: [{}, await this.onFind(options.request)]
+        $and: [{}, await this.onFind(options.request)],
       })
     );
 
     const response = await this.getMongoResponse(
       conditions,
       {
-        distinct: options.distinct
+        distinct: options.distinct,
       },
       [
         {
-          $count: "count"
+          $count: "count",
         },
-        { $limit: 1 }
+        { $limit: 1 },
       ]
     );
 
@@ -142,7 +142,7 @@ export abstract class CrudService<IModel extends Document> {
     // merge filter and conditions
     conditions = this.cast(
       _merge(conditions, options.filter || {}, {
-        $and: [{}, await this.onFind(options.request)]
+        $and: [{}, await this.onFind(options.request)],
       })
     );
 
@@ -157,7 +157,7 @@ export abstract class CrudService<IModel extends Document> {
       response.header("X-total-count", numberOfDocuments.toString());
       response.header("Access-Control-Expose-Headers", [
         "X-total-count",
-        (response.getHeader("Access-Control-Expose-Headers") || "").toString()
+        (response.getHeader("Access-Control-Expose-Headers") || "").toString(),
       ]);
     }
 
@@ -199,7 +199,7 @@ export abstract class CrudService<IModel extends Document> {
 
     // remove version number
     delete model.__v;
-    Object.keys(model).forEach(key => {
+    Object.keys(model).forEach((key) => {
       if (model[key] === "") {
         model[key] = null;
       }
@@ -218,7 +218,7 @@ export abstract class CrudService<IModel extends Document> {
    * @param args
    */
   public async put(
-    modelItem: IModel,
+    modelItem: Omit<IModel, keyof Document> & Partial<Document>,
     request?: INuRequest | any,
     ...args: any
   ): Promise<IModel> {
@@ -233,7 +233,7 @@ export abstract class CrudService<IModel extends Document> {
 
     // remove version number
     delete modelItem.__v;
-    Object.keys(modelItem).forEach(key => {
+    Object.keys(modelItem).forEach((key) => {
       if (modelItem[key] === "") {
         modelItem[key] = null;
       }
@@ -283,7 +283,7 @@ export abstract class CrudService<IModel extends Document> {
     const found = await this.find(conditions);
 
     return await Promise.all(
-      found.map(model => this.delete(model._id, request)!)
+      found.map((model) => this.delete(model._id, request)!)
     );
   }
 
@@ -314,7 +314,7 @@ export abstract class CrudService<IModel extends Document> {
   public getReferenceVirtuals(): string[] {
     const virtuals = (this.crudModel.schema as any).virtuals;
 
-    return Object.keys(virtuals).filter(key => !!virtuals[key].options.ref);
+    return Object.keys(virtuals).filter((key) => !!virtuals[key].options.ref);
   }
 
   /**
@@ -345,7 +345,7 @@ export abstract class CrudService<IModel extends Document> {
         return model;
       } else {
         return (await this.get(model._id || model._id, {
-          populate: paths
+          populate: paths,
         }))!;
       }
     }
@@ -368,7 +368,7 @@ export abstract class CrudService<IModel extends Document> {
     request?: INuRequest | any
   ): Promise<IModel[]> {
     return Promise.all(
-      models.map(model => this.populate(model, paths, picks, request))
+      models.map((model) => this.populate(model, paths, picks, request))
     );
   }
 
@@ -515,9 +515,9 @@ export abstract class CrudService<IModel extends Document> {
     return mergePopulateOptions(
       (
         await Promise.all(
-          paths.map(path => this.deepPopulate(path, picks, request))
+          paths.map((path) => this.deepPopulate(path, picks, request))
         )
-      ).filter(param => param !== undefined) as ModelPopulateOptions[]
+      ).filter((param) => param !== undefined) as ModelPopulateOptions[]
     );
   }
 
@@ -545,7 +545,7 @@ export abstract class CrudService<IModel extends Document> {
 
     // gather current pick selectors
     const selection = picks
-      .map(pick => {
+      .map((pick) => {
         // popping results in the pickParts containing the current layer
         const pickParts = pick.split(".");
         const field = pickParts.pop();
@@ -555,7 +555,7 @@ export abstract class CrudService<IModel extends Document> {
         }
         return undefined;
       })
-      .filter(item => !!item);
+      .filter((item) => !!item);
 
     return {
       path: currentPosition,
@@ -568,8 +568,8 @@ export abstract class CrudService<IModel extends Document> {
       populate:
         (await this.deepPopulate(pathParts.join("."), picks, request, [
           ...journey,
-          currentPosition
-        ])) || []
+          currentPosition,
+        ])) || [],
     };
   }
 
@@ -591,10 +591,10 @@ export abstract class CrudService<IModel extends Document> {
     let service: CrudService<IModel> = this;
     let haystack = {
       ...service.getSchema(),
-      ...(service.crudModel.schema as any).virtuals
+      ...(service.crudModel.schema as any).virtuals,
     };
 
-    path.split(".").forEach(position => {
+    path.split(".").forEach((position) => {
       if (haystack[position]) {
         haystack = haystack[position];
 
@@ -604,7 +604,7 @@ export abstract class CrudService<IModel extends Document> {
           service = CrudService.serviceMap[ref];
           haystack = {
             ...service.getSchema(),
-            ...(service.crudModel.schema as any).virtuals
+            ...(service.crudModel.schema as any).virtuals,
           };
         }
       }
@@ -618,12 +618,12 @@ export abstract class CrudService<IModel extends Document> {
    * @param conditions
    */
   private cast(conditions: IMongoConditions): IMongoConditions {
-    Object.keys(conditions).forEach(key => {
+    Object.keys(conditions).forEach((key) => {
       const value = conditions[key];
       if (key.startsWith("$")) {
         if (["$and", "$or", "$nor"].includes(key)) {
           conditions[key] = Array.isArray(value)
-            ? value.map(item => this.cast(item))
+            ? value.map((item) => this.cast(item))
             : this.cast(value);
         }
         return;
@@ -634,19 +634,19 @@ export abstract class CrudService<IModel extends Document> {
       if (type) {
         // take sub-objects into account like $in
         if (typeof value === "object" && !Array.isArray(value)) {
-          Object.keys(value).forEach(subKey => {
+          Object.keys(value).forEach((subKey) => {
             const subValue = value[subKey];
             if (!subKey.startsWith("$") || typeof subValue === "boolean") {
               return;
             }
 
             conditions[key][subKey] = Array.isArray(subValue)
-              ? subValue.map(v => this.castValue(v, type))
+              ? subValue.map((v) => this.castValue(v, type))
               : this.castValue(subValue, type);
           });
         } else {
           conditions[key] = Array.isArray(value)
-            ? value.map(v => this.castValue(v, type))
+            ? value.map((v) => this.castValue(v, type))
             : this.castValue(value, type);
         }
       }
@@ -667,7 +667,7 @@ export abstract class CrudService<IModel extends Document> {
 
     let object = this.getSchema();
     let service: CrudService<any> = this;
-    path.split(".").forEach(key => {
+    path.split(".").forEach((key) => {
       // first check if the field is a reference
       const virtual = (service.crudModel.schema as any).virtuals[key];
       if (virtual?.options?.ref) {
@@ -742,7 +742,7 @@ export abstract class CrudService<IModel extends Document> {
   private getLookupPipeline(keys: string[]): IMongoConditions[] {
     const pipeline: IMongoConditions[] = [];
     for (const key of keys) {
-      const path = key.split(".").filter(field => !field.includes("$")); // filter $in, $or etc.
+      const path = key.split(".").filter((field) => !field.includes("$")); // filter $in, $or etc.
       path.pop(); // remove the last step since it points to the field
 
       let service: CrudService<any> = this;
@@ -765,16 +765,16 @@ export abstract class CrudService<IModel extends Document> {
             from: service.crudModel.collection.collectionName,
             localField: virtual.options.localField,
             foreignField: virtual.options.foreignField,
-            as: journey.join(".")
-          }
+            as: journey.join("."),
+          },
         });
 
         // add the unwind
         pipeline.push({
           $unwind: {
             path: `$${journey.join(".")}`,
-            preserveNullAndEmptyArrays: true
-          }
+            preserveNullAndEmptyArrays: true,
+          },
         });
       }
     }
@@ -796,12 +796,12 @@ export abstract class CrudService<IModel extends Document> {
     // get field selection
     const projection = {};
     options.select
-      ?.filter(field => !field.includes("."))
-      .forEach(field => (projection[field] = 1));
+      ?.filter((field) => !field.includes("."))
+      .forEach((field) => (projection[field] = 1));
 
     // get field sorting
     const sort = {};
-    options.sort?.forEach(field => {
+    options.sort?.forEach((field) => {
       const desc = field.startsWith("-");
       const cleanField = desc ? field.replace("-", "") : field;
       sort[cleanField] = desc ? -1 : 1;
@@ -811,14 +811,14 @@ export abstract class CrudService<IModel extends Document> {
     const keys = Array.from(
       new Set(
         getDeepKeys(conditions)
-          .map(key =>
+          .map((key) =>
             key
               .split(".")
-              .filter(field => !field.includes("$"))
+              .filter((field) => !field.includes("$"))
               .join(".")
           )
           .concat(Object.keys(sort))
-          .filter(key => key.includes("."))
+          .filter((key) => key.includes("."))
       )
     );
 
@@ -831,8 +831,8 @@ export abstract class CrudService<IModel extends Document> {
       pipeline.push({
         $group: {
           _id: `$${options.distinct}`,
-          doc: { $first: "$$ROOT" }
-        }
+          doc: { $first: "$$ROOT" },
+        },
       });
       pipeline.push({ $replaceRoot: { newRoot: "$doc" } });
     }
@@ -875,8 +875,8 @@ export abstract class CrudService<IModel extends Document> {
     // get field selection
     const projection = {};
     options.select
-      ?.filter(field => !field.includes("."))
-      .forEach(field => (projection[field] = 1));
+      ?.filter((field) => !field.includes("."))
+      .forEach((field) => (projection[field] = 1));
 
     // build population params
     if (options.populate?.length === 0) {
@@ -891,11 +891,8 @@ export abstract class CrudService<IModel extends Document> {
     const cursors = await this.getMongoResponse(conditions, options);
 
     // hydrate and populate the response
-    return cursors.map(model =>
-      this.crudModel
-        .hydrate(model)
-        .populate(populateOptions)
-        .execPopulate()
+    return cursors.map((model) =>
+      this.crudModel.hydrate(model).populate(populateOptions).execPopulate()
     );
   }
 }
