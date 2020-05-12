@@ -634,7 +634,7 @@ export abstract class CrudService<IModel extends Document> {
       if (type) {
         // take sub-objects into account like $in
         if (typeof value === "object" && !Array.isArray(value)) {
-          Object.keys(value).forEach((subKey) => {
+          Object.keys(value ?? {}).forEach((subKey) => {
             const subValue = value[subKey];
             if (!subKey.startsWith("$") || typeof subValue === "boolean") {
               return;
