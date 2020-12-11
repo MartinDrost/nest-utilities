@@ -1,11 +1,10 @@
 export interface IHttpOptions {
+  filter?: Record<string, Record<string, any>>;
+  search?: Record<string, Record<string, any>>;
   sort?: string;
-  filter?: { [key: string]: string };
   offset?: string;
   limit?: string;
-  pick?: string;
-  search?: string;
-  searchScope?: string;
+  select?: string;
   populate?: string;
   distinct?: string;
   random?: string;
