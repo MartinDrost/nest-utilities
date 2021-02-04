@@ -1,9 +1,4 @@
-import {
-  castableOperators,
-  Conditions,
-  CrudService,
-  IQueryOptions,
-} from "fundering";
+import { Conditions, CrudService, IQueryOptions } from "fundering";
 import { IPopulateOptions } from "fundering/distribution/interfaces/populate-options.interface";
 import { customOperators } from "../constants/custom-operators";
 import { IExpressQueryOptions } from "../interfaces/express-query-options.interface";
@@ -79,15 +74,6 @@ const castQueryConditions = (
     // omit keys which pass the remainingDepth
     const fieldDepth = !field.startsWith("$") ? field.split(".").length : 0;
     if (fieldDepth > remainingDepth) {
-      continue;
-    }
-
-    // omit operators which aren't supported by the casting service
-    if (
-      field.startsWith("$") &&
-      !castableOperators.includes(field) &&
-      !customOperators[field]
-    ) {
       continue;
     }
 
@@ -183,6 +169,12 @@ const limitPopulateOptionsDepth = (
       option.populate = limitPopulateOptionsDepth(
         option.populate,
         remainingDepth - 1
+      ) as IPopulateOptions[];
+    } else {
+      const path = option.split(".");
+      option = option.slice(
+        0,
+        path.length - Math.max(0, path.length - remainingDepth)
       );
     }
 
