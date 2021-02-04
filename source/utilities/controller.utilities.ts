@@ -44,8 +44,8 @@ export const queryToConditions = (
   maxDepth = 3
 ): Conditions => {
   const conditions: Conditions = {};
-  if (query.filter) {
-    conditions.$and = Object.entries(query.filter ?? {}).map(([key, value]) =>
+  if (query.match) {
+    conditions.$and = Object.entries(query.match ?? {}).map(([key, value]) =>
       castQueryConditions({ [key]: value }, maxDepth)
     );
   }
