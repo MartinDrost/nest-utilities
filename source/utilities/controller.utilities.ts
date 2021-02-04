@@ -3,11 +3,12 @@ import {
   Conditions,
   CrudService,
   IQueryOptions,
-} from 'fundering';
-import { customOperators } from '../constants/custom-operators';
-import { IExpressQueryOptions } from '../interfaces/express-query-options.interface';
-import { IHttpOptions } from '../interfaces/http-options.interface';
-import { IQueryOptionsConfig } from '../interfaces/query-options-config.interface';
+} from "fundering";
+import { IPopulateOptions } from "fundering/distribution/interfaces/populate-options.interface";
+import { customOperators } from "../constants/custom-operators";
+import { IExpressQueryOptions } from "../interfaces/express-query-options.interface";
+import { IHttpOptions } from "../interfaces/http-options.interface";
+import { IQueryOptionsConfig } from "../interfaces/query-options-config.interface";
 
 /**
  * Adds a method to the onBeforeCount hook which injects the total count
@@ -15,18 +16,18 @@ import { IQueryOptionsConfig } from '../interfaces/query-options-config.interfac
  * @param service
  */
 export const addCountHeaderHook = async (service: CrudService<any>) => {
-  const _postCount = service.getHook('postCount');
+  const _postCount = service.getHook("postCount");
 
-  (service as any)['postCount'] = async (
+  (service as any)["postCount"] = async (
     resultCount: number,
-    options?: IExpressQueryOptions,
+    options?: IExpressQueryOptions
   ) => {
     // append the total count header and expose it to the client
-    options?.response?.header('X-total-count', resultCount.toString());
-    options?.response?.header('Access-Control-Expose-Headers', [
-      'X-total-count',
+    options?.response?.header("X-total-count", resultCount.toString());
+    options?.response?.header("Access-Control-Expose-Headers", [
+      "X-total-count",
       (
-        options?.response?.getHeader('Access-Control-Expose-Headers') || ''
+        options?.response?.getHeader("Access-Control-Expose-Headers") || ""
       ).toString(),
     ]);
 
@@ -40,89 +41,105 @@ export const addCountHeaderHook = async (service: CrudService<any>) => {
  */
 export const queryToConditions = (
   query: IHttpOptions,
-  maxDepth = 3,
+  maxDepth = 3
 ): Conditions => {
-  const conditions: Conditions = { $and: [], $or: [] };
-
-  // move filter queries to the $and conditions
-  for (const [field, condition] of Object.entries(query.filter || [])) {
-    // omit keys which pass the maxDepth
-    if (field.split('.').length > maxDepth) {
-      continue;
-    }
-
-    for (const [operator, value] of Object.entries(condition)) {
-      // cast custom operators
-      if (customOperators[operator]) {
-        conditions.$and.push({
-          [field]: customOperators[operator](value),
-        });
-      }
-
-      // omit operators which aren't supported by the casting service
-      if (!castableOperators.includes(operator)) {
-        continue;
-      }
-      conditions.$and.push({
-        [field]: {
-          [operator]: Array.isArray(value)
-            ? value.map(decodeURIComponent)
-            : decodeURIComponent(value),
-        },
-      });
-    }
+  const conditions: Conditions = {};
+  if (query.filter) {
+    conditions.$and = Object.entries(query.filter ?? {}).map(([key, value]) =>
+      castQueryConditions({ [key]: value }, maxDepth)
+    );
   }
-
-  // move search queries to the $or conditions
-  for (const [field, condition] of Object.entries(query.search || [])) {
-    for (const [operator, value] of Object.entries(condition)) {
-      // cast custom operators
-      if (customOperators[operator]) {
-        conditions.$or.push({
-          [field]: customOperators[operator](value),
-        });
-      }
-
-      // omit operators which aren't supported by the casting service
-      if (!castableOperators.includes(operator)) {
-        continue;
-      }
-
-      conditions.$or.push({
-        [field]: {
-          [operator]: Array.isArray(value)
-            ? value.map(decodeURIComponent)
-            : decodeURIComponent(value),
-        },
-      });
-
-      // add "WHERE LIKE" search
-      if (['$eq', '$ne'].includes(operator)) {
-        const regex = {
-          // escape regular expression characters
-          $regex: (decodeURIComponent(value) + '').replace(
-            /[\\^$.*+?()[\]{}|]/g,
-            '\\$&',
-          ),
-          $options: 'i',
-        };
-        if (operator === '$eq') {
-          conditions.$or.push({ [field]: regex });
-        } else {
-          conditions.$or.push({ [field]: { $not: regex } });
-        }
-      }
-    }
-  }
-
-  // remove empty $and and $or statements since they break the query
-  for (const [key, value] of Object.entries(conditions)) {
-    if (value.length === 0) {
-      delete conditions[key];
-    }
+  if (query.search) {
+    conditions.$or = Object.entries(query.search ?? {}).map(([key, value]) =>
+      castQueryConditions({ [key]: value }, maxDepth, true)
+    );
   }
 
   return conditions;
+};
+
+/**
+ * Cast query conditions to conditions worthy for the
+ * aggregation pipeline.
+ *
+ * Filters out unsupported operators and forces a maximum field depth
+ *
+ * @param conditions
+ * @param remainingDepth
+ * @param wildcard
+ */
+const castQueryConditions = (
+  conditions: Conditions,
+  remainingDepth = 3,
+  wildcard = false
+) => {
+  const castedConditions: Conditions = {};
+  // move filter queries to the $and conditions
+  for (const [field, value] of Object.entries(conditions || [])) {
+    // omit keys which pass the remainingDepth
+    const fieldDepth = !field.startsWith("$") ? field.split(".").length : 0;
+    if (fieldDepth > remainingDepth) {
+      continue;
+    }
+
+    // omit operators which aren't supported by the casting service
+    if (
+      field.startsWith("$") &&
+      !castableOperators.includes(field) &&
+      !customOperators[field]
+    ) {
+      continue;
+    }
+
+    // either:
+    // 1. cast custom operators
+    // 2. cast every item in an array
+    // 3. use the string value
+    // 4. cast the object value
+    if (customOperators[field]) {
+      castedConditions[field] = customOperators[field](value);
+    } else if (Array.isArray(value)) {
+      castedConditions[field] = value.map((item) =>
+        typeof item === "string"
+          ? decodeURIComponent(item)
+          : castQueryConditions(item, remainingDepth - fieldDepth)
+      );
+    } else if (typeof value === "string") {
+      if (!wildcard) {
+        castedConditions[field] = value;
+      }
+
+      // wildcard for soon to be deprecated search query param
+      if (wildcard) {
+        const searchConditions: Conditions[] = [{ [field]: value }];
+        // add "WHERE LIKE" search
+        if (!field.startsWith("$") || ["$eq", "$ne"].includes(field)) {
+          const regex = {
+            // escape regular expression characters
+            $regex: (decodeURIComponent(value) + "").replace(
+              /[\\^$.*+?()[\]{}|]/g,
+              "\\$&"
+            ),
+            $options: "i",
+          };
+          if (!field.startsWith("$") || field === "$eq") {
+            searchConditions.push({ [field]: regex });
+          } else {
+            searchConditions.push({ [field]: { $not: regex } });
+          }
+        }
+
+        castedConditions.$or = searchConditions;
+      }
+    } else {
+      castedConditions[field] = castQueryConditions(
+        value,
+        remainingDepth - fieldDepth
+      );
+    }
+  }
+
+  return castedConditions;
 };
 
 /**
@@ -131,23 +148,44 @@ export const queryToConditions = (
  */
 export const queryToOptions = (
   query: IHttpOptions,
-  config?: IQueryOptionsConfig,
+  config?: IQueryOptionsConfig
 ): IQueryOptions => {
-  const { populate, limit, offset, sort, random, select, distinct } = query;
+  let { populate, limit, offset, sort, random, select, distinct } = query;
   const maxDepth = config?.maxDepth ?? 3;
-  const populatePaths =
+  populate =
     populate == undefined ? undefined : Array.isArray(populate) ? populate : [];
 
   const options: IQueryOptions = {
-    filter: queryToConditions(query, maxDepth),
-    populate: populatePaths,
+    match: queryToConditions(query, maxDepth),
+    populate: limitPopulateOptionsDepth(populate, maxDepth),
     limit: limit ? +limit : undefined,
     skip: offset ? +offset : undefined,
-    random: !['0', 'false', undefined].includes(random),
+    random: !["0", "false", undefined].includes(random),
     sort: Array.isArray(sort) ? sort : [],
     select: Array.isArray(select) ? select : [],
     distinct,
   };
 
   return options;
+};
+
+/**
+ * Limit the attempted population depth
+ * @param populateOptions
+ * @param remainingDepth
+ */
+const limitPopulateOptionsDepth = (
+  populateOptions?: (string | IPopulateOptions)[],
+  remainingDepth = 3
+) => {
+  return populateOptions?.map((option) => {
+    if (typeof option !== "string") {
+      option.populate = limitPopulateOptionsDepth(
+        option.populate,
+        remainingDepth - 1
+      );
+    }
+
+    return option;
+  });
 };

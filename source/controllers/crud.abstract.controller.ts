@@ -45,7 +45,7 @@ export abstract class CrudController<ModelType extends IModel> {
   ): Promise<ModelType> {
     const model = await this.crudService.findById(id, options);
     if (!model) {
-      throw new NotFoundException("No model with that id found");
+      throw new NotFoundException("No model found");
     }
 
     return model;
