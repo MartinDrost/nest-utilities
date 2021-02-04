@@ -172,10 +172,9 @@ const limitPopulateOptionsDepth = (
       ) as IPopulateOptions[];
     } else {
       const path = option.split(".");
-      option = option.slice(
-        0,
-        path.length - Math.max(0, path.length - remainingDepth)
-      );
+      option = path
+        .slice(0, path.length - Math.max(0, path.length - remainingDepth))
+        .join(".");
     }
 
     return option;
