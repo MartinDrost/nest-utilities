@@ -68,7 +68,7 @@ const castQueryConditions = (
   remainingDepth = 3,
   wildcard = false
 ) => {
-  const castedConditions: Conditions = {};
+  let castedConditions: Conditions = {};
   // move filter queries to the $and conditions
   for (const [field, value] of Object.entries(conditions || [])) {
     // omit keys which pass the remainingDepth
@@ -83,7 +83,10 @@ const castQueryConditions = (
     // 3. use the string value
     // 4. cast the object value
     if (customOperators[field]) {
-      castedConditions[field] = customOperators[field](value);
+      castedConditions = {
+        ...castedConditions,
+        ...customOperators[field](value),
+      };
     } else if (Array.isArray(value)) {
       castedConditions[field] = value.map((item) =>
         typeof item === "string"
