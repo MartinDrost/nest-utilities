@@ -31,29 +31,6 @@ export const addCountHeaderHook = async (service: CrudService<any>) => {
 };
 
 /**
- * Converts the filter and search query parameters to a Conditions object
- * @param query
- */
-export const queryToConditions = (
-  query: IHttpOptions,
-  maxDepth = 3
-): Conditions => {
-  const conditions: Conditions = {};
-  if (query.match) {
-    conditions.$and = Object.entries(query.match ?? {}).map(([key, value]) =>
-      castQueryConditions({ [key]: value }, maxDepth)
-    );
-  }
-  if (query.search) {
-    conditions.$or = Object.entries(query.search ?? {}).map(([key, value]) =>
-      castQueryConditions({ [key]: value }, maxDepth, true)
-    );
-  }
-
-  return conditions;
-};
-
-/**
  * Cast query conditions to conditions worthy for the
  * aggregation pipeline.
  *
@@ -63,11 +40,7 @@ export const queryToConditions = (
  * @param remainingDepth
  * @param wildcard
  */
-const castQueryConditions = (
-  conditions: Conditions,
-  remainingDepth = 3,
-  wildcard = false
-) => {
+const castQueryConditions = (conditions: Conditions, remainingDepth = 3) => {
   let castedConditions: Conditions = {};
   // move filter queries to the $and conditions
   for (const [field, value] of Object.entries(conditions || [])) {
@@ -94,32 +67,7 @@ const castQueryConditions = (
           : castQueryConditions(item, remainingDepth - fieldDepth)
       );
     } else if (typeof value === "string") {
-      if (!wildcard) {
-        castedConditions[field] = value;
-      }
-
-      // wildcard for soon to be deprecated search query param
-      if (wildcard) {
-        const searchConditions: Conditions[] = [{ [field]: value }];
-        // add "WHERE LIKE" search
-        if (!field.startsWith("$") || ["$eq", "$ne"].includes(field)) {
-          const regex = {
-            // escape regular expression characters
-            $regex: (decodeURIComponent(value) + "").replace(
-              /[\\^$.*+?()[\]{}|]/g,
-              "\\$&"
-            ),
-            $options: "i",
-          };
-          if (!field.startsWith("$") || field === "$eq") {
-            searchConditions.push({ [field]: regex });
-          } else {
-            searchConditions.push({ [field]: { $not: regex } });
-          }
-        }
-
-        castedConditions.$or = searchConditions;
-      }
+      castedConditions[field] = value;
     } else {
       castedConditions[field] = castQueryConditions(
         value,
@@ -139,20 +87,23 @@ export const queryToOptions = (
   query: IHttpOptions,
   config?: IQueryOptionsConfig
 ): IQueryOptions => {
-  let { populate, limit, offset, sort, random, select, distinct } = query;
   const maxDepth = config?.maxDepth ?? 3;
-  populate =
-    populate == undefined ? undefined : Array.isArray(populate) ? populate : [];
+  const populate =
+    query.populate == undefined
+      ? undefined
+      : Array.isArray(query.populate)
+      ? query.populate
+      : [];
 
   const options: IQueryOptions = {
-    match: queryToConditions(query, maxDepth),
+    match: castQueryConditions(query.match || {}, maxDepth),
     populate: limitPopulateOptionsDepth(populate, maxDepth),
-    limit: limit ? +limit : undefined,
-    skip: offset ? +offset : undefined,
-    random: !["0", "false", undefined].includes(random),
-    sort: Array.isArray(sort) ? sort : [],
-    select: Array.isArray(select) ? select : [],
-    distinct,
+    limit: query.limit ? +query.limit : undefined,
+    skip: query.offset ? +query.offset : undefined,
+    random: !["0", "false", undefined].includes(query.random),
+    sort: Array.isArray(query.sort) ? query.sort : [],
+    select: Array.isArray(query.select) ? query.select : [],
+    distinct: query.distinct,
   };
 
   return options;

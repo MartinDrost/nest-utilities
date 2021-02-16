@@ -2,7 +2,6 @@ import { IPopulateOptions } from "fundering/distribution/interfaces/populate-opt
 
 export interface IHttpOptions {
   match?: Record<string, Record<string, any>>;
-  search?: Record<string, Record<string, any>>;
   sort?: string;
   offset?: string;
   limit?: string;
