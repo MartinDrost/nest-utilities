@@ -1,6 +1,6 @@
 {
   "name": "nest-utilities",
-  "version": "8.1.4",
+  "version": "8.1.5",
   "description": "Extends Nestjs projects using Fundering with endpoint helpers",
   "main": "distribution/index.js",
   "scripts": {
