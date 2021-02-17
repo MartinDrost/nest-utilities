@@ -13,7 +13,7 @@ import {
   Post,
   Put,
   Query,
-  Req
+  Req,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { plainToClass } from "class-transformer";
@@ -55,7 +55,7 @@ export abstract class CrudController<IModel extends Document> {
     this.checkPermissions(this.permissions.read, request.context);
 
     const params = this.queryToOptions(query);
-    return this.crudService.find({}, { request, ...params });
+    return this.crudService.find({}, { ...params, request, count: true });
   }
 
   @Get(":id")
@@ -68,7 +68,11 @@ export abstract class CrudController<IModel extends Document> {
     this.checkPermissions(this.permissions.read, request.context);
 
     const params = this.queryToOptions(query);
-    const model = await this.crudService.get(id, { request, ...params });
+    const model = await this.crudService.get(id, {
+      ...params,
+      request,
+      count: true,
+    });
 
     if (model === null) {
       throw new NotFoundException("No model with that id found");
@@ -87,7 +91,11 @@ export abstract class CrudController<IModel extends Document> {
     this.checkPermissions(this.permissions.read, request.context);
 
     const params = this.queryToOptions(query);
-    return this.crudService.getMany(ids.split(","), { request, ...params });
+    return this.crudService.getMany(ids.split(","), {
+      ...params,
+      request,
+      count: true,
+    });
   }
 
   @Put(":id?")
@@ -179,7 +187,7 @@ export abstract class CrudController<IModel extends Document> {
         ? query.searchScope.split(",")
         : ["_id", ...Object.keys(this.crudService.getSchema())];
 
-      scope.forEach(key => {
+      scope.forEach((key) => {
         searchOptions[key] = query.search || "";
       });
     }
@@ -187,10 +195,10 @@ export abstract class CrudController<IModel extends Document> {
     // create filter conditions
     const conditions: IMongoConditions[][] = [
       searchOptions,
-      query.filter || {}
-    ].map(conditionPair => {
+      query.filter || {},
+    ].map((conditionPair) => {
       const conditions: IMongoConditions[] = [];
-      Object.keys(conditionPair).forEach(key => {
+      Object.keys(conditionPair).forEach((key) => {
         const keyConditions: IMongoConditions[] = [];
         let value: string = conditionPair[key];
         let validator = "$eq";
@@ -243,12 +251,12 @@ export abstract class CrudController<IModel extends Document> {
       random: false,
       limit: query.limit ? +query.limit : undefined,
       skip: query.offset ? +query.offset : undefined,
-      select: []
+      select: [],
     };
 
     // create sort options
     if (query.sort !== undefined) {
-      options.sort = query.sort.split(",").filter(v => v);
+      options.sort = query.sort.split(",").filter((v) => v);
     }
 
     // sort randomly if its defined as anything but false
@@ -293,16 +301,16 @@ export abstract class CrudController<IModel extends Document> {
     const errors = await validate(
       plainToClass(customDto || this.crudDto, model),
       {
-        skipUndefinedProperties: isPartial
+        skipUndefinedProperties: isPartial,
       }
     );
     if (errors.length) {
       throw new BadRequestException({
         statusCode: HttpStatus.BAD_REQUEST,
         message: errors
-          .map(error => Object.values(error.constraints))
+          .map((error) => Object.values(error.constraints))
           .reduce((curr, prev) => prev.concat(curr), []),
-        error: "Bad Request"
+        error: "Bad Request",
       });
     }
   }

@@ -146,7 +146,7 @@ export abstract class CrudService<IModel extends Document> {
       })
     );
 
-    if (options.request?.context) {
+    if (options.request?.context && options.count === true) {
       // store the amount of documents without limit in a response header
       const response = options.request.context
         .switchToHttp()
@@ -239,7 +239,7 @@ export abstract class CrudService<IModel extends Document> {
       }
     });
 
-    modelItem = (await this.onUpdate(modelItem, request)) as IModel;
+    modelItem = (await this.onUpdate(modelItem as IModel, request)) as IModel;
     await this.crudModel.replaceOne({ _id: model._id }, modelItem).exec();
 
     const updated = await this.crudModel.findById(modelItem._id).exec();

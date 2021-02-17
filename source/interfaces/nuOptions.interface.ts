@@ -12,4 +12,6 @@ export interface INuOptions {
   request?: INuRequest;
   filter?: IMongoConditions;
   populate?: string[];
+
+  count?: boolean;
 }
