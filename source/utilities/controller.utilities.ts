@@ -67,7 +67,7 @@ const castQueryConditions = (conditions: Conditions, remainingDepth = 3) => {
           : castQueryConditions(item, remainingDepth - fieldDepth)
       );
     } else if (typeof value === "string") {
-      castedConditions[field] = value;
+      castedConditions[field] = decodeURIComponent(value);
     } else {
       castedConditions[field] = castQueryConditions(
         value,
