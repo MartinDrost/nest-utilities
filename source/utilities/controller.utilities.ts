@@ -95,11 +95,12 @@ export const queryToOptions = (
       ? query.populate
       : [];
 
+  const skip = query.skip || query.offset;
   const options: IQueryOptions = {
     match: castQueryConditions(query.match || {}, maxDepth),
     populate: limitPopulateOptionsDepth(populate, maxDepth),
     limit: query.limit ? +query.limit : undefined,
-    skip: query.offset ? +query.offset : undefined,
+    skip: skip ? +skip : undefined,
     random: !["0", "false", undefined].includes(query.random),
     sort: Array.isArray(query.sort) ? query.sort : [],
     select: Array.isArray(query.select) ? query.select : [],
