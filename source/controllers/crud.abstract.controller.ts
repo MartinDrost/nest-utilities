@@ -134,7 +134,7 @@ export abstract class CrudController<ModelType extends IModel> {
    * @param options
    */
   async handlePatchMany(
-    models: ModelType[],
+    models: Partial<ModelType>[],
     options?: IExpressQueryOptions
   ): Promise<ModelType[]> {
     // check if all models can be found by the requester
@@ -142,13 +142,13 @@ export abstract class CrudController<ModelType extends IModel> {
       models.map(async (model) => {
         model._id = model._id || model.id;
         model.id = model._id;
-        await this.handleFindById(model._id, {
+        await this.handleFindById(model._id || "", {
           request: options?.request,
         });
       })
     );
 
-    return this.crudService.mergeModels(models, options);
+    return this.crudService.mergeModels(models || [], options);
   }
 
   /**

@@ -17,7 +17,7 @@
     "mongoose": "5.12.3",
     "rimraf": "3.0.0",
     "typescript": "4.5.5",
-    "fundering": "1.3.0",
+    "fundering": "1.3.1",
     "rxjs": "6.6.3"
   },
   "peerDependencies": {
