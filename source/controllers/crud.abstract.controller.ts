@@ -22,6 +22,18 @@ export abstract class CrudController<ModelType extends IModel> {
   }
 
   /**
+   * Handles create requests for creating multiple models at once
+   * @param models
+   * @param options
+   */
+  handleCreateMany(
+    models: ModelType[],
+    options?: IExpressQueryOptions
+  ): Promise<ModelType[]> {
+    return this.crudService.createMany(models, options);
+  }
+
+  /**
    * Handles find requests
    * @param conditions
    * @param options
@@ -73,6 +85,29 @@ export abstract class CrudController<ModelType extends IModel> {
   }
 
   /**
+   * Handles put requests for replacing multiple models at once
+   * @param model
+   * @param options
+   */
+  async handlePutMany(
+    models: ModelType[],
+    options?: IExpressQueryOptions
+  ): Promise<ModelType[]> {
+    // check if all models can be found by the requester
+    await Promise.all(
+      models.map(async (model) => {
+        model._id = model._id || model.id;
+        model.id = model._id;
+        await this.handleFindById(model._id, {
+          request: options?.request,
+        });
+      })
+    );
+
+    return this.crudService.replaceModels(models, options);
+  }
+
+  /**
    * Handles patch requests
    * @param id
    * @param model
@@ -91,6 +126,29 @@ export abstract class CrudController<ModelType extends IModel> {
     });
 
     return this.crudService.mergeModel(model, options);
+  }
+
+  /**
+   * Handles patch requests for merging multiple models at once
+   * @param model
+   * @param options
+   */
+  async handlePatchMany(
+    models: ModelType[],
+    options?: IExpressQueryOptions
+  ): Promise<ModelType[]> {
+    // check if all models can be found by the requester
+    await Promise.all(
+      models.map(async (model) => {
+        model._id = model._id || model.id;
+        model.id = model._id;
+        await this.handleFindById(model._id, {
+          request: options?.request,
+        });
+      })
+    );
+
+    return this.crudService.mergeModels(models, options);
   }
 
   /**
