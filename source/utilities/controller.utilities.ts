@@ -98,6 +98,7 @@ export const queryToOptions = (
   const skip = query.skip || query.offset;
   const options: IQueryOptions = {
     match: castQueryConditions(query.match || {}, maxDepth),
+    addFields: query.addFields,
     populate: limitPopulateOptionsDepth(populate, maxDepth),
     limit: query.limit ? +query.limit : undefined,
     skip: skip ? +skip : undefined,
