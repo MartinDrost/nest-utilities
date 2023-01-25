@@ -63,11 +63,11 @@ const castQueryConditions = (conditions: Conditions, remainingDepth = 3) => {
     } else if (Array.isArray(value)) {
       castedConditions[field] = value.map((item) =>
         typeof item === "string"
-          ? decodeURIComponent(item)
+          ? toPrimitive(decodeURIComponent(item))
           : castQueryConditions(item, remainingDepth - fieldDepth)
       );
     } else if (typeof value === "string") {
-      castedConditions[field] = decodeURIComponent(value);
+      castedConditions[field] = toPrimitive(decodeURIComponent(value));
     } else {
       castedConditions[field] = castQueryConditions(
         value,
@@ -77,6 +77,42 @@ const castQueryConditions = (conditions: Conditions, remainingDepth = 3) => {
   }
 
   return castedConditions;
+};
+
+const enclosedRegex = /^{{.*}}$/;
+const numberRegex = /^\d+(\.\d+)?$/;
+
+/**
+ * Parses a value to it's primitive type when enclosed in {{}}
+ * @param value
+ * @returns
+ */
+const toPrimitive = (value: string) => {
+  if (enclosedRegex.test(value) === false) {
+    return value;
+  }
+
+  // remove the {{}} from the string
+  const strippedValue = value.slice(2, -2);
+
+  // check if the value contains a valid number
+  if (numberRegex.test(value)) {
+    return +value;
+  }
+
+  // map the values to their written primitives otherwise
+  switch (strippedValue) {
+    case "null":
+      return null;
+    case "undefined":
+      return undefined;
+    case "true":
+      return true;
+    case "false":
+      return false;
+    default:
+      return value;
+  }
 };
 
 /**
