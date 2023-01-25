@@ -96,8 +96,8 @@ const toPrimitive = (value: string) => {
   const strippedValue = value.slice(2, -2);
 
   // check if the value contains a valid number
-  if (numberRegex.test(value)) {
-    return +value;
+  if (numberRegex.test(strippedValue)) {
+    return +strippedValue;
   }
 
   // map the values to their written primitives otherwise
@@ -111,7 +111,7 @@ const toPrimitive = (value: string) => {
     case "false":
       return false;
     default:
-      return value;
+      return strippedValue;
   }
 };
 
