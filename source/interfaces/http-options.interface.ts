@@ -69,7 +69,7 @@ export interface IHttpOptions {
    * @example "firstName"
    * @see https://www.w3schools.com/sql/sql_distinct.asp
    */
-  distinct?: string;
+  distinct?: string | string[];
 
   /**
    * Defines whether you want the result to be in a random order. Useful for
