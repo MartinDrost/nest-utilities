@@ -11,8 +11,6 @@ import { IQueryOptionsConfig } from "../interfaces/query-options-config.interfac
  * @param service
  */
 export const addCountHeaderHook = async (service: CrudService<any>) => {
-  const _postCount = service.getHook("postCount");
-
   (service as any)["postCount"] = async (
     resultCount: number,
     options?: IExpressQueryOptions
@@ -25,8 +23,6 @@ export const addCountHeaderHook = async (service: CrudService<any>) => {
         options?.response?.getHeader("Access-Control-Expose-Headers") || ""
       ).toString(),
     ]);
-
-    _postCount?.(resultCount, options);
   };
 };
 
