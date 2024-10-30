@@ -154,6 +154,9 @@ const limitPopulateOptionsDepth = (
 ) => {
   return populateOptions?.map((option) => {
     if (typeof option !== "string") {
+      if (option.match) {
+        option.match = castQueryConditions(option.match, remainingDepth);
+      }
       option.populate = limitPopulateOptionsDepth(
         option.populate,
         remainingDepth - 1
