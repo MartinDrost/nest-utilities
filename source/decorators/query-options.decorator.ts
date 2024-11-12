@@ -8,12 +8,10 @@ export const QueryOptions = createParamDecorator<IQueryOptionsConfig>(
     const request: Request = ctx.switchToHttp().getRequest();
     const response: Response = ctx.switchToHttp().getResponse();
 
-    if (request.header["x-query-options"]) {
+    const headerOptions = request.header("x-query-options");
+    if (headerOptions) {
       return {
-        ...queryToOptions(
-          JSON.parse(request.header["x-query-options"]),
-          config
-        ),
+        ...queryToOptions(JSON.parse(headerOptions), config),
         request,
         response,
       };
