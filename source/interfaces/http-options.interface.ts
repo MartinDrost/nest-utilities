@@ -79,4 +79,11 @@ export interface IHttpOptions {
    * @see https://docs.mongodb.com/manual/reference/operator/aggregation/sample/
    */
   random?: string;
+
+  /**
+   * Allows you to define custom options which can be used in the and other fundering
+   * utilities or in your own code. This is a way to extend the functionality of the
+   * fundering library without having to modify the source code.
+   */
+  custom?: Record<string, any>;
 }

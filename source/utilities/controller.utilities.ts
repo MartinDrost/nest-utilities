@@ -138,6 +138,7 @@ export const queryToOptions = (
     sort: Array.isArray(query.sort) ? query.sort : [],
     select: Array.isArray(query.select) ? query.select : [],
     distinct: query.distinct,
+    custom: castQueryConditions(query.custom || {}, maxDepth),
   };
 
   return options;
