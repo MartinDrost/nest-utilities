@@ -81,6 +81,16 @@ export interface IHttpOptions {
   random?: string;
 
   /**
+   * Specifies whether you want to include the count of total matching documents
+   * in the response. This is useful for pagination where you want to know the
+   * total number of documents available.
+   *
+   * The count will be available in the `X-Total-Count` header of the response.
+   * @example true
+   */
+  includeCount?: string | boolean;
+
+  /**
    * Allows you to define custom options which can be used in the and other fundering
    * utilities or in your own code. This is a way to extend the functionality of the
    * fundering library without having to modify the source code.

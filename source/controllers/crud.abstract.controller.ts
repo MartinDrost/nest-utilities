@@ -42,7 +42,9 @@ export abstract class CrudController<ModelType extends IModel> {
     conditions: Conditions,
     options?: IExpressQueryOptions
   ): Promise<ModelType[]> {
-    await this.crudService.count(conditions, options);
+    if (options?.includeCount) {
+      await this.crudService.count(conditions, options);
+    }
     return this.crudService.find(conditions, options);
   }
 

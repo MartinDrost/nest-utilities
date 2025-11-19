@@ -138,6 +138,7 @@ export const queryToOptions = (
     sort: Array.isArray(query.sort) ? query.sort : [],
     select: Array.isArray(query.select) ? query.select : [],
     distinct: query.distinct,
+    includeCount: query.includeCount === "true" || query.includeCount === true,
     custom: castQueryConditions(query.custom || {}, maxDepth),
   };
 
