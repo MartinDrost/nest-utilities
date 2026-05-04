@@ -11,11 +11,11 @@
     "clean": "rimraf distribution/*"
   },
   "devDependencies": {
-    "@nestjs/common": "8.4.6",
+    "@nestjs/common": "11.0.0",
     "@types/express": "4.17.1",
     "mongoose": "8.9.5",
     "rimraf": "3.0.0",
-    "typescript": "4.5.5",
+    "typescript": "6.0.3",
     "fundering": "2.5.0",
     "rxjs": "7.5.5"
   },

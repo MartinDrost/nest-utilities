@@ -8,8 +8,11 @@
     "noImplicitAny": false,
     "esModuleInterop": true,
     "outDir": "distribution",
+    "rootDir": "source",
     "sourceMap": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true
   },
   "include": ["source"],
   "exclude": ["node_modules"]
