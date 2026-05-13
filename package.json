@@ -16,13 +16,13 @@
     "mongoose": "8.9.5",
     "rimraf": "3.0.0",
     "typescript": "6.0.3",
-    "fundering": "2.5.0",
+    "fundering": "2.5.1",
     "rxjs": "7.5.5"
   },
   "peerDependencies": {
     "@nestjs/common": ">=11.0.0",
     "@nestjs/core": ">=11.0.0",
-    "fundering": ">=2.5.0",
+    "fundering": ">=2.5.1",
     "rxjs": ">=7.1.0",
     "mongoose": ">=8.9.5"
   },
